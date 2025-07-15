@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace QuantumConnect
@@ -30,13 +31,19 @@ namespace QuantumConnect
         [Header("UI Elements")]
         public TextMeshProUGUI turnText;
         public TextMeshProUGUI winText;
+        public TextMeshProUGUI scoreText;
         public Image turnImage;
         public Sprite playerOneIcon;
         public Sprite playerTwoIcon;
+        public Button retryButton;
+
         TokenType[,,] _board;
         int _currentPlayer;
         bool _isDropping;
         bool _gameOver;
+
+        int _playerOneScore;
+        int _playerTwoScore;
         readonly Color _playerOneColor = Color.red;
         readonly Color _playerTwoColor = Color.yellow;
         void Awake()
@@ -52,8 +59,17 @@ namespace QuantumConnect
             _currentPlayer = 0;
             _isDropping = false;
             _gameOver = false;
+            _playerOneScore = 0;
+            _playerTwoScore = 0;
             if (winText != null) winText.gameObject.SetActive(false);
+            if (retryButton != null)
+            {
+                retryButton.gameObject.SetActive(false);
+                retryButton.onClick.AddListener(OnRetryButtonClicked);
+            }
             UpdateTurnUI();
+            UpdateScoreUI();
+
         }
 
         /// <summary>
@@ -71,6 +87,18 @@ namespace QuantumConnect
                 turnImage.sprite = _currentPlayer == 0 ? playerOneIcon : playerTwoIcon;
             }
         }
+
+        /// <summary>
+        /// Updates the score display for both players.
+        /// </summary>
+        void UpdateScoreUI()
+        {
+            if (scoreText != null)
+            {
+                scoreText.text = $"P1: {_playerOneScore}   P2: {_playerTwoScore}";
+            }
+        }
+
         /// <summary>
         /// Rotate the board 90° around the Y-axis (sideways).
         /// </summary>
@@ -187,8 +215,14 @@ namespace QuantumConnect
                 if (winText != null)
                 {
                     winText.text = placed == TokenType.PlayerOne ? "Player One Won!" : "Player Two Won!";
+                    winText.color = _currentPlayer == 0 ? _playerOneColor : _playerTwoColor;
+
                     winText.gameObject.SetActive(true);
                 }
+                if (placed == TokenType.PlayerOne) _playerOneScore++; else _playerTwoScore++;
+                UpdateScoreUI();
+                if (retryButton != null) retryButton.gameObject.SetActive(true);
+                
                 yield break;
             }
             GridManager.Instance.SetCellVisible(x, y, z, false);
@@ -196,6 +230,14 @@ namespace QuantumConnect
             _currentPlayer = 1 - _currentPlayer;
             UpdateTurnUI();
             _isDropping = false;
+        }
+
+        /// <summary>
+        /// Called when Retry button is clicked: reloads the current scene to restart the game.
+        /// </summary>
+        void OnRetryButtonClicked()
+        {
+            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         }
     }
 }
