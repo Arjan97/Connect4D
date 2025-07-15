@@ -24,7 +24,7 @@ namespace QuantumConnect
         [Header("References")]
         public GameObject cellPrefab;
 
-        Cell[,,] cells;
+        public Cell[,,] cells;
         public Transform TimelineContainer { get; private set; }
         public static GridManager Instance { get; private set; }
 
@@ -63,64 +63,44 @@ namespace QuantumConnect
                         ) * spacing;
 
                         Vector3 pos = new Vector3(x, y, z) * spacing - centerOffset; GameObject go = Instantiate(cellPrefab, pos, Quaternion.identity, container.transform);
+                        go.transform.localPosition = pos;
+                        go.transform.localRotation = Quaternion.identity;
                         Cell cell = go.GetComponent<Cell>();
                         cell.Initialize(x, y, z);
                         cells[x, y, z] = cell;
                     }
         }
 
+        /// <summary>
+        /// Hides (or shows) the cube mesh at the given cell.
+        /// </summary>
+        public void SetCellVisible(int x, int y, int z, bool visible)
+        {
+            var rend = cells[x, y, z].GetComponent<MeshRenderer>();
+            if (rend != null) rend.enabled = visible;
+        }
+
         /// <summary>Returns the world-space position of the cell at (x,y,z).</summary>
         public Vector3 GetCellWorldPosition(int x, int y, int z)
             => cells[x, y, z].transform.position;
-        public IEnumerator AnimateContainerRotation(Vector3Int axis, float angle)
+
+        /// <summary>
+        /// Smoothly rotates the TimelineContainer around its own center.
+        /// </summary>
+        public IEnumerator AnimateContainerRotation(Vector3 axis, float angle)
         {
-            Quaternion start = TimelineContainer.rotation;
-            Quaternion end = start * Quaternion.AngleAxis(angle, axis);
+            Vector3 pivot = TimelineContainer.position;
             float elapsed = 0f;
-            while (elapsed < rotationDuration) 
+            float duration = rotationDuration;
+            while (elapsed < duration)
             {
+                float step = (angle / duration) * Time.deltaTime;
+                TimelineContainer.RotateAround(pivot, axis, step);
                 elapsed += Time.deltaTime;
-                float t = Mathf.Clamp01(elapsed / rotationDuration);
-                TimelineContainer.rotation = Quaternion.Slerp(start, end, t);
                 yield return null;
             }
-            TimelineContainer.rotation = end;
+            TimelineContainer.RotateAround(pivot, axis, angle - (angle / duration) * elapsed);
         }
-        public void RefreshAllCells(TokenType[,,] boardState)
-        {
-            int sx = sizeX, sy = sizeY, sz = sizeZ;
-            for (int x = 0; x < sx; x++)
-                for (int y = 0; y < sy; y++)
-                    for (int z = 0; z < sz; z++)
-                    {
-                        Cell c = cells[x, y, z];
-                        c.Clear();
 
-                        var t = boardState[x, y, z];
-                        if (t == TokenType.None)
-                            continue;
-
-                        // pick the right prefab from GameManager
-                        GameObject prefab = (t == TokenType.PlayerOne)
-                            ? GameManager.Instance.playerOneTokenPrefab
-                            : GameManager.Instance.playerTwoTokenPrefab;
-
-                        // instantiate it exactly at the cell's position, parented to the cell
-                        Instantiate(prefab,
-                                    c.transform.position,
-                                    Quaternion.identity,
-                                    c.transform);
-                    }
-        }
-        /// <summary>
-        /// Calls Clear() on every cell, removing any spawned tokens.
-        /// </summary>
-        public void ClearAllCells()
-        {
-            for (int x = 0; x < sizeX; x++)
-                for (int y = 0; y < sizeY; y++)
-                    for (int z = 0; z < sizeZ; z++)
-                        cells[x, y, z].Clear();
-        }
     }
 }

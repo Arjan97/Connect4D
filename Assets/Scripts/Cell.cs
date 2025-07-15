@@ -20,25 +20,5 @@ namespace QuantumConnect
             Y = iy;
             Z = iz;
         }
-
-        /// <summary>
-        /// Called by InputManager when this cell is clicked.
-        /// </summary>
-        public void OnCellClicked()
-        {
-            GameManager.Instance.HandleCellClick(X, Z);
-        }
-
-        /// <summary>
-        /// Removes any spawned token children so we can rebuild visuals from scratch.
-        /// </summary>
-        public void Clear()
-        {
-            // destroy any token cubes or prefabs parented here
-            for (int i = transform.childCount - 1; i >= 0; i--)
-            {
-                Destroy(transform.GetChild(i).gameObject);
-            }
-        }
     }
 }
