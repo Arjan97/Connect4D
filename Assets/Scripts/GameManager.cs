@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -21,6 +22,9 @@ namespace QuantumConnect
         [Header("Token Prefabs")]
         public GameObject playerOneTokenPrefab;
         public GameObject playerTwoTokenPrefab;
+        [Header("Highlight Settings")]
+        [Tooltip("Seconds to wait between blink states")]
+        public float blinkInterval = 0.5f;
 
         [Header("Drop Settings")]
         [Tooltip("World-units above top of grid to spawn tokens.")]
@@ -37,10 +41,17 @@ namespace QuantumConnect
         public Sprite playerTwoIcon;
         public Button retryButton;
 
+        [Header("Audio Settings")]
+        public AudioClip passThroughSFX;   
+        public AudioClip tokenLandSFX;     
+        public AudioClip winSFX;          
+
+        AudioSource _audioSource;
         TokenType[,,] _board;
         int _currentPlayer;
         bool _isDropping;
         bool _gameOver;
+        List<Vector3Int> _winningLine;
 
         int _playerOneScore;
         int _playerTwoScore;
@@ -50,6 +61,10 @@ namespace QuantumConnect
         {
             if (Instance != null && Instance != this) Destroy(gameObject);
             else Instance = this;
+            DontDestroyOnLoad(this.gameObject);
+            _audioSource = GetComponent<AudioSource>();
+            if (_audioSource == null)
+                _audioSource = gameObject.AddComponent<AudioSource>();
         }
 
         void Start()
@@ -65,7 +80,6 @@ namespace QuantumConnect
             if (retryButton != null)
             {
                 retryButton.gameObject.SetActive(false);
-                retryButton.onClick.AddListener(OnRetryButtonClicked);
             }
             UpdateTurnUI();
             UpdateScoreUI();
@@ -128,7 +142,34 @@ namespace QuantumConnect
             _isDropping = true;
             StartCoroutine(DropTokenRoutine(x, y, z));
         }
+        public void ResetGame(bool keepScores = true)
+        {
+            // Clear board
+            for (int x = 0; x < GridManager.Instance.sizeX; x++)
+                for (int y = 0; y < GridManager.Instance.sizeY; y++)
+                    for (int z = 0; z < GridManager.Instance.sizeZ; z++)
+                        _board[x, y, z] = TokenType.None;
 
+            // Reset states
+            _currentPlayer = 0;
+            _isDropping = false;
+            _gameOver = false;
+
+            if (!keepScores)
+            {
+                _playerOneScore = 0;
+                _playerTwoScore = 0;
+                UpdateScoreUI();
+            }
+
+            // Reset UI
+            if (winText != null) winText.gameObject.SetActive(false);
+            if (retryButton != null) retryButton.gameObject.SetActive(false);
+            UpdateTurnUI();
+
+            // Clear grid visuals
+            GridManager.Instance.ResetGrid();
+        }
         int FindDropY(int x, int z)
         {
             var gm = GridManager.Instance;
@@ -143,7 +184,7 @@ namespace QuantumConnect
         /// </summary>
         bool CheckWin(int x, int y, int z, TokenType t)
         {
-            var directions = new Vector3Int[] {
+            var dirs = new Vector3Int[] {
             new Vector3Int(1,0,0), new Vector3Int(0,1,0), new Vector3Int(0,0,1),
             new Vector3Int(1,1,0), new Vector3Int(1,-1,0),
             new Vector3Int(1,0,1), new Vector3Int(1,0,-1),
@@ -152,13 +193,143 @@ namespace QuantumConnect
             new Vector3Int(1,-1,1), new Vector3Int(1,-1,-1)
         };
             int n = GridManager.Instance.sizeX;
-
-            foreach (var dir in directions)
+            foreach (var dir in dirs)
             {
-                int count = 1 + CountDirection(x, y, z, dir, t) + CountDirection(x, y, z, -dir, t);
-                if (count >= 4) return true;
+                int count1 = CountDirection(x, y, z, dir, t);
+                int count2 = CountDirection(x, y, z, -dir, t);
+                if (count1 + count2 + 1 >= 4)
+                {
+                    // build winning line coords
+                    _winningLine = new List<Vector3Int>();
+                    Vector3Int start = new Vector3Int(x - dir.x * count2,
+                                                      y - dir.y * count2,
+                                                      z - dir.z * count2);
+                    for (int i = 0; i < 4; i++)
+                        _winningLine.Add(start + dir * i);
+                    return true;
+                }
             }
             return false;
+        }
+
+        IEnumerator DropTokenRoutine(int x, int y, int z)
+        {
+            TokenType placed = _currentPlayer == 0 ? TokenType.PlayerOne : TokenType.PlayerTwo;
+            _board[x, y, z] = placed;
+
+            var gm = GridManager.Instance;
+            Vector3 targetPos = gm.GetCellWorldPosition(x, y, z);
+            Vector3 topCellPos = gm.GetCellWorldPosition(x, gm.sizeY - 1, z);
+            float spawnY = topCellPos.y + dropHeight;
+            Vector3 spawnPos = new Vector3(targetPos.x, spawnY, targetPos.z);
+
+            GameObject prefab = placed == TokenType.PlayerOne ? playerOneTokenPrefab : playerTwoTokenPrefab;
+            GameObject token = Instantiate(prefab, spawnPos, prefab.transform.rotation, gm.TimelineContainer);
+
+            StartCoroutine(BlockFlashRoutine(x, y, z));
+
+            yield return StartCoroutine(DropVisual(token.transform, targetPos));
+            gm.SetCellVisible(x, y, z, false);
+            _audioSource.PlayOneShot(tokenLandSFX);
+
+            if (CheckWin(x, y, z, placed))
+            {
+                _audioSource.PlayOneShot(winSFX);
+                _gameOver = true;
+                if (winText != null)
+                {
+                    winText.text = placed == TokenType.PlayerOne ? "Player One Won!" : "Player Two Won!";
+                    winText.color = placed == TokenType.PlayerOne ? _playerOneColor : _playerTwoColor;
+                    winText.gameObject.SetActive(true);
+                }
+                if (placed == TokenType.PlayerOne) _playerOneScore++; else _playerTwoScore++;
+                UpdateScoreUI();
+                if (retryButton != null) retryButton.gameObject.SetActive(true);
+
+                StartCoroutine(HighlightWinLineRoutine());
+                yield break;
+            }
+
+            _currentPlayer = 1 - _currentPlayer;
+            UpdateTurnUI();
+            _isDropping = false;
+        }
+
+        IEnumerator HighlightWinLineRoutine()
+        {
+            if (_winningLine == null) yield break;
+            var gm = GridManager.Instance;
+
+            float snapAngle = ComputeSnapAngleToFaceWinningLine();
+            yield return StartCoroutine(
+                GridManager.Instance.AnimateContainerRotation(Vector3.up, snapAngle)
+            );
+
+            foreach (var coord in _winningLine)
+            {
+                if (coord.x < 0 || coord.x >= gm.sizeX ||
+                    coord.y < 0 || coord.y >= gm.sizeY ||
+                    coord.z < 0 || coord.z >= gm.sizeZ)
+                    continue;
+
+                gm.SetCellVisible(coord.x, coord.y, coord.z, true);
+                _audioSource.PlayOneShot(passThroughSFX);
+                var cell = gm.cells[coord.x, coord.y, coord.z];
+                if (cell == null) continue;
+                var rend = cell.GetComponent<MeshRenderer>();
+                if (rend == null) continue;
+
+                rend.material.color = Color.green;
+                yield return new WaitForSeconds(0.5f);
+                gm.SetCellVisible(coord.x, coord.y, coord.z, false);
+            }
+        }
+
+        /// <summary>
+        /// Computes the minimal yaw (around world‐up) to turn the line’s centroid toward the camera (world +Z).
+        /// </summary>
+        float ComputeSnapAngleToFaceWinningLine()
+        {
+            var gm = GridManager.Instance;
+            var container = gm.TimelineContainer;
+
+            Vector3 sum = Vector3.zero;
+            foreach (var c in _winningLine)
+                sum += gm.GetCellWorldPosition(c.x, c.y, c.z);
+            Vector3 centroid = sum / _winningLine.Count;
+
+            Vector3 dir = centroid - container.position;
+            dir.y = 0;
+            if (dir.sqrMagnitude < 0.0001f) return 0f;
+            dir.Normalize();
+
+            Vector3 localDir = Quaternion.Inverse(container.rotation) * dir;
+
+            float targetY;
+            if (Mathf.Abs(localDir.z) >= Mathf.Abs(localDir.x))
+            {
+                targetY = (localDir.z >= 0f) ? 180f : 0f;
+            }
+            else
+            {
+                targetY = (localDir.x >= 0f) ? 90f : -90f;
+            }
+
+            float currentY = container.eulerAngles.y;
+            return Mathf.DeltaAngle(currentY, targetY);
+        }
+
+            IEnumerator BlockFlashRoutine(int x, int yDest, int z)
+        {
+            var gm = GridManager.Instance;
+            float wait = gm.cellSpacing.y / dropSpeed;
+            for (int y = gm.sizeY - 1; y > yDest; y--)
+            {
+                gm.SetCellVisible(x, y, z, false);
+                _audioSource.PlayOneShot(passThroughSFX);
+                yield return new WaitForSeconds(wait);
+                gm.SetCellVisible(x, y, z, true);
+            }
         }
 
         /// <summary>
@@ -189,55 +360,6 @@ namespace QuantumConnect
                 yield return null;
             }
             token.position = targetPos;
-        }
-
-        IEnumerator DropTokenRoutine(int x, int y, int z)
-        {
-            // Reserve board state
-            TokenType placed = _currentPlayer == 0 ? TokenType.PlayerOne : TokenType.PlayerTwo;
-            _board[x, y, z] = placed;
-
-            var gm = GridManager.Instance;
-            Vector3 targetPos = gm.GetCellWorldPosition(x, y, z);
-            // Determine the world Y of the top cell in this column
-            Vector3 topCellPos = gm.GetCellWorldPosition(x, gm.sizeY - 1, z);
-            float spawnY = topCellPos.y + dropHeight;
-            Vector3 spawnPos = new Vector3(targetPos.x, spawnY, targetPos.z);
-
-            GameObject prefab = (_currentPlayer == 0) ? playerOneTokenPrefab : playerTwoTokenPrefab;
-            GameObject token = Instantiate(prefab, spawnPos, Quaternion.identity, gm.TimelineContainer);
-
-            yield return StartCoroutine(DropVisual(token.transform, targetPos));
-            // Check win
-            if (CheckWin(x, y, z, placed))
-            {
-                _gameOver = true;
-                if (winText != null)
-                {
-                    winText.text = placed == TokenType.PlayerOne ? "Player One Won!" : "Player Two Won!";
-                    winText.color = _currentPlayer == 0 ? _playerOneColor : _playerTwoColor;
-
-                    winText.gameObject.SetActive(true);
-                }
-                if (placed == TokenType.PlayerOne) _playerOneScore++; else _playerTwoScore++;
-                UpdateScoreUI();
-                if (retryButton != null) retryButton.gameObject.SetActive(true);
-                
-                yield break;
-            }
-            GridManager.Instance.SetCellVisible(x, y, z, false);
-            // Switch player
-            _currentPlayer = 1 - _currentPlayer;
-            UpdateTurnUI();
-            _isDropping = false;
-        }
-
-        /// <summary>
-        /// Called when Retry button is clicked: reloads the current scene to restart the game.
-        /// </summary>
-        void OnRetryButtonClicked()
-        {
-            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         }
     }
 }

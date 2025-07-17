@@ -32,6 +32,8 @@ namespace QuantumConnect
         {
             if (Instance != null && Instance != this) Destroy(gameObject);
             else Instance = this;
+            DontDestroyOnLoad(this.gameObject);
+
         }
 
         /// <summary>
@@ -43,34 +45,57 @@ namespace QuantumConnect
         }
 
         /// <summary>
-        /// Instantiates a sizeX×sizeY×sizeZ grid of cells under a new "Timeline0" container.
+        /// Instantiates a sizeX×sizeY×sizeZ grid of cells under a new container.
         /// </summary>
         void SpawnGrid()
         {
             cells = new Cell[sizeX, sizeY, sizeZ];
-            GameObject container = new GameObject("Timeline0");
+            GameObject container = new GameObject("GridCube");
             container.transform.position = startPosition;
             TimelineContainer = container.transform;
+
+            Vector3 centerOffset = new Vector3(
+                          (sizeX - 1) / 2f,
+                          (sizeY - 1) / 2f,
+                          (sizeZ - 1) / 2f
+                      ) * spacing;
 
             for (int x = 0; x < sizeX; x++)
                 for (int y = 0; y < sizeY; y++)
                     for (int z = 0; z < sizeZ; z++)
                     {
-                        Vector3 centerOffset = new Vector3(
-                            (sizeX - 1) / 2f,
-                            (sizeY - 1) / 2f,
-                            (sizeZ - 1) / 2f
-                        ) * spacing;
+                        // only build if on any of the six faces:
+                        bool isOuter = x == 0 || x == sizeX - 1
+                                    || y == 0 || y == sizeY - 1
+                                    || z == 0 || z == sizeZ - 1;
+                        if (!isOuter) continue;
 
-                        Vector3 pos = new Vector3(x, y, z) * spacing - centerOffset; GameObject go = Instantiate(cellPrefab, pos, Quaternion.identity, container.transform);
-                        go.transform.localPosition = pos;
+                        Vector3 localPos = new Vector3(
+                            x * cellSpacing.x,
+                            y * cellSpacing.y,
+                            z * cellSpacing.z
+                        ) - centerOffset;
+
+                        GameObject go = Instantiate(cellPrefab, container.transform);
+                        go.transform.localPosition = localPos;
                         go.transform.localRotation = Quaternion.identity;
+
                         Cell cell = go.GetComponent<Cell>();
                         cell.Initialize(x, y, z);
                         cells[x, y, z] = cell;
                     }
         }
 
+        /// <summary>
+        /// Clears all cells and respawns the grid cube.
+        /// </summary>
+        public void ResetGrid()
+        {
+            if (TimelineContainer != null)
+                Destroy(TimelineContainer.gameObject);
+
+            SpawnGrid();
+        }
         /// <summary>
         /// Hides (or shows) the cube mesh at the given cell.
         /// </summary>
