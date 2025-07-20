@@ -11,6 +11,7 @@ namespace QuantumConnect
     public class InputManager : MonoBehaviour
     {
         public static InputManager Instance { get; private set; }
+        public bool playAgainstAI = false;
 
         void Awake()
         {
@@ -50,6 +51,7 @@ namespace QuantumConnect
                 }
             }
         }
+
         bool IsCellOnFrontFace(Cell cell)
         {
             Transform container = GridManager.Instance.TimelineContainer;
@@ -78,7 +80,6 @@ namespace QuantumConnect
             return false;
         }
 
-
         public void StartGame()
         {
             SceneManager.LoadScene("QuantumConnect");
@@ -88,6 +89,14 @@ namespace QuantumConnect
         {
             if (GameManager.Instance != null)
                 GameManager.Instance.ResetGame();
+        }
+
+        /// <summary>
+        /// Call from main menu UI to choose AI opponent.
+        /// </summary>
+        public void SetPlayAgainstAI(bool useAI)
+        {
+            playAgainstAI = useAI;
         }
     }
 }

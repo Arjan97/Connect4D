@@ -22,6 +22,8 @@ namespace QuantumConnect
         [Header("Token Prefabs")]
         public GameObject playerOneTokenPrefab;
         public GameObject playerTwoTokenPrefab;
+        public GameObject aiTokenPrefab;
+
         [Header("Highlight Settings")]
         [Tooltip("Seconds to wait between blink states")]
         public float blinkInterval = 0.5f;
@@ -39,13 +41,15 @@ namespace QuantumConnect
         public Image turnImage;
         public Sprite playerOneIcon;
         public Sprite playerTwoIcon;
+        public Sprite aiIcon;
         public Button retryButton;
 
         [Header("Audio Settings")]
         public AudioClip passThroughSFX;   
         public AudioClip tokenLandSFX;     
-        public AudioClip winSFX;          
+        public AudioClip winSFX;
 
+        public int GetDropY(int x, int z) => FindDropY(x, z);
         AudioSource _audioSource;
         TokenType[,,] _board;
         int _currentPlayer;
@@ -57,6 +61,7 @@ namespace QuantumConnect
         int _playerTwoScore;
         readonly Color _playerOneColor = Color.red;
         readonly Color _playerTwoColor = Color.yellow;
+        readonly Color _aiColor = Color.purple;
         void Awake()
         {
             if (Instance != null && Instance != this) Destroy(gameObject);
@@ -91,14 +96,33 @@ namespace QuantumConnect
         /// </summary>
         void UpdateTurnUI()
         {
+            bool vsAI = InputManager.Instance.playAgainstAI;
             if (turnText != null)
             {
-                turnText.text = _currentPlayer == 0 ? "Player One's Turn" : "Player Two's Turn";
-                turnText.color = _currentPlayer == 0 ? _playerOneColor : _playerTwoColor;
+                if (_currentPlayer == 0)
+                {
+                    turnText.text = "Player One's Turn";
+                    turnText.color = _playerOneColor;
+                }
+                else if (vsAI)
+                {
+                    turnText.text = "AI's Turn";
+                    turnText.color = _aiColor;
+                }
+                else
+                {
+                    turnText.text = "Player Two's Turn";
+                    turnText.color = _playerTwoColor;
+                }
             }
             if (turnImage != null)
             {
-                turnImage.sprite = _currentPlayer == 0 ? playerOneIcon : playerTwoIcon;
+                if (_currentPlayer == 0)
+                    turnImage.sprite = playerOneIcon;
+                else if (vsAI)
+                    turnImage.sprite = aiIcon;
+                else
+                    turnImage.sprite = playerTwoIcon;
             }
         }
 
@@ -109,7 +133,9 @@ namespace QuantumConnect
         {
             if (scoreText != null)
             {
-                scoreText.text = $"P1: {_playerOneScore}   P2: {_playerTwoScore}";
+                bool vsAI = InputManager.Instance.playAgainstAI;
+                string secondLabel = vsAI ? "AI" : "P2";
+                scoreText.text = $"P1: {_playerOneScore}   {secondLabel}: {_playerTwoScore}";
             }
         }
 
@@ -144,13 +170,11 @@ namespace QuantumConnect
         }
         public void ResetGame(bool keepScores = true)
         {
-            // Clear board
             for (int x = 0; x < GridManager.Instance.sizeX; x++)
                 for (int y = 0; y < GridManager.Instance.sizeY; y++)
                     for (int z = 0; z < GridManager.Instance.sizeZ; z++)
                         _board[x, y, z] = TokenType.None;
 
-            // Reset states
             _currentPlayer = 0;
             _isDropping = false;
             _gameOver = false;
@@ -162,13 +186,24 @@ namespace QuantumConnect
                 UpdateScoreUI();
             }
 
-            // Reset UI
             if (winText != null) winText.gameObject.SetActive(false);
             if (retryButton != null) retryButton.gameObject.SetActive(false);
             UpdateTurnUI();
 
-            // Clear grid visuals
             GridManager.Instance.ResetGrid();
+        }
+
+        /// <summary>
+        /// Simulates placing a token at (x,z) for a player and checks for a win.
+        /// </summary>
+        public bool IsWinningMove(int x, int z, TokenType t)
+        {
+            int y = GetDropY(x, z);
+            if (y < 0) return false;
+            _board[x, y, z] = t;
+            bool win = CheckWin(x, y, z, t);
+            _board[x, y, z] = TokenType.None;
+            return win;
         }
         int FindDropY(int x, int z)
         {
@@ -223,7 +258,13 @@ namespace QuantumConnect
             float spawnY = topCellPos.y + dropHeight;
             Vector3 spawnPos = new Vector3(targetPos.x, spawnY, targetPos.z);
 
-            GameObject prefab = placed == TokenType.PlayerOne ? playerOneTokenPrefab : playerTwoTokenPrefab;
+            GameObject prefab;
+            if (placed == TokenType.PlayerOne)
+                prefab = playerOneTokenPrefab;
+            else if (InputManager.Instance.playAgainstAI && _currentPlayer == 1)
+                prefab = aiTokenPrefab;
+            else
+                prefab = playerTwoTokenPrefab; 
             GameObject token = Instantiate(prefab, spawnPos, prefab.transform.rotation, gm.TimelineContainer);
 
             StartCoroutine(BlockFlashRoutine(x, y, z));
@@ -238,8 +279,17 @@ namespace QuantumConnect
                 _gameOver = true;
                 if (winText != null)
                 {
-                    winText.text = placed == TokenType.PlayerOne ? "Player One Won!" : "Player Two Won!";
-                    winText.color = placed == TokenType.PlayerOne ? _playerOneColor : _playerTwoColor;
+                    bool vsAI = InputManager.Instance.playAgainstAI;
+                    if (placed == TokenType.PlayerOne)
+                    {
+                        winText.text = "Player One Won!";
+                        winText.color = _playerOneColor;
+                    }
+                    else
+                    {
+                        winText.text = vsAI ? "AI Won!" : "Player Two Won!";
+                        winText.color = vsAI ? _aiColor : _playerTwoColor;
+                    }
                     winText.gameObject.SetActive(true);
                 }
                 if (placed == TokenType.PlayerOne) _playerOneScore++; else _playerTwoScore++;
@@ -252,9 +302,19 @@ namespace QuantumConnect
 
             _currentPlayer = 1 - _currentPlayer;
             UpdateTurnUI();
+            if (InputManager.Instance.playAgainstAI && _currentPlayer == 1)
+            {
+                StartCoroutine(AIDelayAndMoveRoutine());
+                yield break; 
+            }
             _isDropping = false;
         }
-
+        IEnumerator AIDelayAndMoveRoutine()
+        {
+            yield return new WaitForSeconds(0.5f);
+            AIManager.Instance.MakeMove();
+            _isDropping = false;
+        }
         IEnumerator HighlightWinLineRoutine()
         {
             if (_winningLine == null) yield break;
