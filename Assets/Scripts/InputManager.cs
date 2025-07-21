@@ -30,29 +30,27 @@ namespace QuantumConnect
 
         void HandleLeftClick()
         {
-            if (playAgainstAI && GameManager.Instance.IsAITurn)
+            if (playAgainstAI && GameManager.Instance != null && GameManager.Instance.IsAITurn)
                 return;
-            if (Mouse.current.leftButton.wasPressedThisFrame)
-            {
-                Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
-                RaycastHit hit;
 
-                if (Physics.Raycast(ray, out hit, 100f))
-                {
-                    if (hit.collider.TryGetComponent<Cell>(out var cell))
-                    {
-                        if (IsCellOnFrontFace(cell))
-                        {
-                            GameManager.Instance.HandleCellClick(cell.X, cell.Z);
-                        }
-                        else
-                        {
-                            Debug.Log("Clicked cell is not on the front-facing plane. Ignored.");
-                        }
-                    }
-                }
-            }
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+                return;
+
+            if (Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame)
+                return;
+            Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
+            if (!Physics.Raycast(ray, out var hit, 100f))
+                return;
+
+            if (!hit.collider.TryGetComponent<Cell>(out var cell))
+                return;
+
+            if (!IsCellOnFrontFace(cell))
+                return;
+
+            GameManager.Instance.HandleCellClick(cell.X, cell.Z);
         }
+
 
         bool IsCellOnFrontFace(Cell cell)
         {

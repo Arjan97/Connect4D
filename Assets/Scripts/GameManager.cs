@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace QuantumConnect
@@ -48,6 +47,7 @@ namespace QuantumConnect
         public AudioClip passThroughSFX;   
         public AudioClip tokenLandSFX;     
         public AudioClip winSFX;
+        public AudioClip warpSFX;
 
         public int GetDropY(int x, int z) => FindDropY(x, z);
         public bool IsAITurn => InputManager.Instance.playAgainstAI && _currentPlayer == 1;
@@ -242,6 +242,7 @@ namespace QuantumConnect
             _board[x, y, z] = t;
             return y;
         }
+
         public void UndoMove(int x, int z)
         {
             for (int y = GridManager.Instance.sizeY - 1; y >= 0; y--)
@@ -250,6 +251,37 @@ namespace QuantumConnect
                     _board[x, y, z] = TokenType.None;
                     return;
                 }
+        }
+
+        /// <summary>
+        /// Shrinks the token to zero, teleports it, then grows it back.
+        /// </summary>
+        IEnumerator ScaleWarpRoutine(Transform token, Vector3 targetWorldPos, float duration = 0.2f)
+        {
+            Vector3 startScale = token.localScale;
+            float half = duration * 0.5f, t = 0f;
+
+            // shrink
+            while (t < half)
+            {
+                token.localScale = Vector3.Lerp(startScale, Vector3.zero, t / half);
+                t += Time.deltaTime;
+                yield return null;
+            }
+            token.localScale = Vector3.zero;
+
+            // teleport
+            token.position = targetWorldPos;
+
+            // grow
+            t = 0f;
+            while (t < half)
+            {
+                token.localScale = Vector3.Lerp(Vector3.zero, startScale, t / half);
+                t += Time.deltaTime;
+                yield return null;
+            }
+            token.localScale = startScale;
         }
 
         public bool CheckAnyWin(TokenType t)
@@ -307,29 +339,71 @@ namespace QuantumConnect
 
         IEnumerator DropTokenRoutine(int x, int y, int z)
         {
-            TokenType placed = _currentPlayer == 0 ? TokenType.PlayerOne : TokenType.PlayerTwo;
-            _board[x, y, z] = placed;
-
             var gm = GridManager.Instance;
-            Vector3 targetPos = gm.GetCellWorldPosition(x, y, z);
-            Vector3 topCellPos = gm.GetCellWorldPosition(x, gm.sizeY - 1, z);
-            float spawnY = topCellPos.y + dropHeight;
-            Vector3 spawnPos = new Vector3(targetPos.x, spawnY, targetPos.z);
+            TokenType placed = _currentPlayer == 0 ? TokenType.PlayerOne : TokenType.PlayerTwo;
 
-            GameObject prefab;
-            if (placed == TokenType.PlayerOne)
-                prefab = playerOneTokenPrefab;
-            else if (InputManager.Instance.playAgainstAI && _currentPlayer == 1)
-                prefab = aiTokenPrefab;
-            else
-                prefab = playerTwoTokenPrefab; 
+            // 1) Spawn at the top of this column:
+            Vector3 topWorld = gm.GetCellWorldPosition(x, gm.sizeY - 1, z);
+            Vector3 spawnPos = topWorld + Vector3.up * dropHeight;
+            GameObject prefab = placed == TokenType.PlayerOne
+                ? playerOneTokenPrefab
+                : (InputManager.Instance.playAgainstAI && _currentPlayer == 1
+                    ? aiTokenPrefab
+                    : playerTwoTokenPrefab);
             GameObject token = Instantiate(prefab, spawnPos, prefab.transform.rotation, gm.TimelineContainer);
 
-            StartCoroutine(BlockFlashRoutine(x, y, z));
+            // 2) Find if there's a hole in this column, pick the highest one:
+            Vector3Int? holeSrc = null;
+            foreach (var kv in gm.BlackHoles)
+            {
+                var src = kv.Key;
+                if (src.x == x && src.z == z)
+                    if (!holeSrc.HasValue || src.y > holeSrc.Value.y)
+                        holeSrc = src;
+            }
 
-            yield return StartCoroutine(DropVisual(token.transform, targetPos));
-            gm.SetCellVisible(x, y, z, false);
-            _audioSource.PlayOneShot(tokenLandSFX);
+            if (holeSrc.HasValue)
+            {
+                var hs = holeSrc.Value;
+                Vector3 holeWorld = gm.GetCellWorldPosition(hs.x, hs.y, hs.z);
+                yield return StartCoroutine(DropVisual(token.transform, holeWorld));         
+
+                _audioSource.PlayOneShot(warpSFX);
+                yield return StartCoroutine(ScaleWarpRoutine(token.transform, holeWorld));
+
+                gm.RemoveBlackHole(hs);
+
+                int xOpp = (hs.x == 0 || hs.x == gm.sizeX - 1) ? gm.sizeX - 1 - hs.x : x;
+                int zOpp = (hs.z == 0 || hs.z == gm.sizeZ - 1) ? gm.sizeZ - 1 - hs.z : z;
+                int dropYOpp = GetDropY(xOpp, zOpp);
+
+                if (dropYOpp >= 0)
+                {
+                    Vector3 topOpp = gm.GetCellWorldPosition(xOpp, gm.sizeY - 1, zOpp);
+                    token.transform.position = topOpp + Vector3.up * dropHeight;
+
+                    Vector3 dest = gm.GetCellWorldPosition(xOpp, dropYOpp, zOpp);
+                    yield return StartCoroutine(DropVisual(token.transform, dest));          
+
+                    gm.SetCellVisible(xOpp, dropYOpp, zOpp, false);
+                    _board[xOpp, dropYOpp, zOpp] = placed;
+
+                    x = xOpp; y = dropYOpp; z = zOpp;
+                }
+                else
+                {
+                    token.transform.position = holeWorld;
+                    _board[hs.x, hs.y, hs.z] = placed;
+                    x = hs.x; y = hs.y; z = hs.z;
+                }
+            }
+            else
+            {
+                Vector3 target = gm.GetCellWorldPosition(x, y, z);
+                yield return StartCoroutine(DropVisual(token.transform, target));
+                gm.SetCellVisible(x, y, z, false);
+                _board[x, y, z] = placed;
+            }
 
             if (CheckWin(x, y, z, placed))
             {
@@ -352,14 +426,13 @@ namespace QuantumConnect
                 }
                 if (placed == TokenType.PlayerOne) _playerOneScore++; else _playerTwoScore++;
                 UpdateScoreUI();
-                if (retryButton != null) retryButton.gameObject.SetActive(true);
-
                 StartCoroutine(HighlightWinLineRoutine());
                 yield break;
             }
 
             _currentPlayer = 1 - _currentPlayer;
             UpdateTurnUI();
+            GridManager.Instance.TrySpawnRandomBlackHole();
             if (InputManager.Instance.playAgainstAI && _currentPlayer == 1)
             {
                 StartCoroutine(AIDelayAndMoveRoutine());
@@ -400,6 +473,18 @@ namespace QuantumConnect
                 rend.material.color = Color.green;
                 yield return new WaitForSeconds(0.5f);
                 gm.SetCellVisible(coord.x, coord.y, coord.z, false);
+
+                yield return new WaitForSeconds(blinkInterval);
+
+                for (int x = 0; x < gm.sizeX; x++)
+                    for (int y = 0; y < gm.sizeY; y++)
+                        for (int z = 0; z < gm.sizeZ; z++)
+                            if (_board[x, y, z] == TokenType.None)
+                                gm.SetCellVisible(x, y, z, true);
+
+                if (retryButton != null)
+                    retryButton.gameObject.SetActive(true);
+
             }
         }
 

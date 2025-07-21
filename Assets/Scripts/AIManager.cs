@@ -58,7 +58,6 @@ namespace QuantumConnect
 
         int Minimax(int depth, bool isMaximizing)
         {
-            // 1) terminal checks
             if (GameManager.Instance.CheckAnyWin(TokenType.PlayerTwo))
                 return 1000 - (MAX_DEPTH - depth);
             if (GameManager.Instance.CheckAnyWin(TokenType.PlayerOne))
@@ -67,14 +66,13 @@ namespace QuantumConnect
                 return EvaluateBoard();
 
             var moves = GetAllValidMoves();
-            if (moves.Count == 0) return 0;  // draw
+            if (moves.Count == 0) return 0;  
 
             if (isMaximizing)
             {
                 int best = int.MinValue;
                 foreach (var m in moves)
                 {
-                    // simulate
                     GameManager.Instance.ApplyMove(m.x, m.y, TokenType.PlayerTwo);
                     int val = Minimax(depth - 1, false);
                     GameManager.Instance.UndoMove(m.x, m.y);
@@ -100,7 +98,6 @@ namespace QuantumConnect
         IEnumerator MakeMoveRoutine()
         {
             yield return new WaitForSeconds(moveDelay);
-            var gm = GridManager.Instance;
             var mgr = GameManager.Instance;
 
             //check for ai win - win
@@ -182,6 +179,7 @@ namespace QuantumConnect
                 }
             return list;
         }
+
         /// <summary>
         /// Rotates the TimelineContainer in discrete 90° increments
         /// so that the given horizontal face (front/right/back/left)
@@ -246,14 +244,6 @@ namespace QuantumConnect
         {
             GameManager.Instance.HandleCellClick(x, z);
             yield return null;
-        }
-
-        int CenterBiasCompare(Vector2Int a, Vector2Int b, int sx, int sz)
-        {
-            Vector2 c = new Vector2((sx - 1) / 2f, (sz - 1) / 2f);
-            float da = (new Vector2(a.x, a.y) - c).sqrMagnitude;
-            float db = (new Vector2(b.x, b.y) - c).sqrMagnitude;
-            return da.CompareTo(db);
         }
     }
 }
