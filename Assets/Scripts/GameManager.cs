@@ -50,6 +50,9 @@ namespace QuantumConnect
         public AudioClip winSFX;
 
         public int GetDropY(int x, int z) => FindDropY(x, z);
+        public bool IsAITurn => InputManager.Instance.playAgainstAI && _currentPlayer == 1;
+        public TokenType[,,] board => _board;
+
         AudioSource _audioSource;
         TokenType[,,] _board;
         int _currentPlayer;
@@ -67,9 +70,8 @@ namespace QuantumConnect
             if (Instance != null && Instance != this) Destroy(gameObject);
             else Instance = this;
             DontDestroyOnLoad(this.gameObject);
-            _audioSource = GetComponent<AudioSource>();
-            if (_audioSource == null)
-                _audioSource = gameObject.AddComponent<AudioSource>();
+
+            _audioSource = GetComponent<AudioSource>() ?? gameObject.AddComponent<AudioSource>();
         }
 
         void Start()
@@ -144,6 +146,7 @@ namespace QuantumConnect
         /// </summary>
         public void RotateLeft()
         {
+            if (InputManager.Instance.playAgainstAI && _currentPlayer == 1) return;
             if (_isDropping) return;
             StartCoroutine(GridManager.Instance.AnimateContainerRotation(Vector3Int.up, 90f));
         }
@@ -153,6 +156,7 @@ namespace QuantumConnect
         /// </summary>
         public void RotateRight()
         {
+            if (InputManager.Instance.playAgainstAI && _currentPlayer == 1) return;
             if (_isDropping) return;
             StartCoroutine(GridManager.Instance.AnimateContainerRotation(Vector3Int.up, -90f));
         }
@@ -205,6 +209,60 @@ namespace QuantumConnect
             _board[x, y, z] = TokenType.None;
             return win;
         }
+
+        public List<Vector2Int> GetForkMoves(List<Vector2Int> validMoves, TokenType t)
+        {
+            var forks = new List<Vector2Int>();
+            foreach (var m in validMoves)
+            {
+                int x = m.x, z = m.y;
+                int y = GetDropY(x, z);
+                if (y < 0) continue;
+                _board[x, y, z] = t;
+                int count = 0;
+                foreach (var n in validMoves)
+                {
+                    if (n.x == x && n.y == z) continue;
+                    if (IsWinningMove(n.x, n.y, t))
+                    {
+                        count++;
+                        if (count >= 2) break;
+                    }
+                }
+                _board[x, y, z] = TokenType.None;
+                if (count >= 2) forks.Add(m);
+            }
+            return forks;
+        }
+
+        public int ApplyMove(int x, int z, TokenType t)
+        {
+            int y = FindDropY(x, z);
+            if (y < 0) return -1;
+            _board[x, y, z] = t;
+            return y;
+        }
+        public void UndoMove(int x, int z)
+        {
+            for (int y = GridManager.Instance.sizeY - 1; y >= 0; y--)
+                if (_board[x, y, z] != TokenType.None)
+                {
+                    _board[x, y, z] = TokenType.None;
+                    return;
+                }
+        }
+
+        public bool CheckAnyWin(TokenType t)
+        {
+            var gm = GridManager.Instance;
+            for (int x = 0; x < gm.sizeX; x++)
+                for (int y = 0; y < gm.sizeY; y++)
+                    for (int z = 0; z < gm.sizeZ; z++)
+                        if (_board[x, y, z] == t && CheckWin(x, y, z, t))
+                            return true;
+            return false;
+        }
+
         int FindDropY(int x, int z)
         {
             var gm = GridManager.Instance;

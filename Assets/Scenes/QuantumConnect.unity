@@ -2203,6 +2203,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: AIManager
       objectReference: {fileID: 0}
+    - target: {fileID: 2586693520926736784, guid: 6c116f6d59f0b99449d308abc4a07e42, type: 3}
+      propertyPath: rotationChance
+      value: 0.671
+      objectReference: {fileID: 0}
     - target: {fileID: 5657385387317752337, guid: 6c116f6d59f0b99449d308abc4a07e42, type: 3}
       propertyPath: m_LocalPosition.x
       value: -24.0132

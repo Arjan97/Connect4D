@@ -30,6 +30,8 @@ namespace QuantumConnect
 
         void HandleLeftClick()
         {
+            if (playAgainstAI && GameManager.Instance.IsAITurn)
+                return;
             if (Mouse.current.leftButton.wasPressedThisFrame)
             {
                 Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
@@ -97,6 +99,22 @@ namespace QuantumConnect
         public void SetPlayAgainstAI(bool useAI)
         {
             playAgainstAI = useAI;
+        }
+
+        /// <summary>
+        /// Determines which face of the grid is active (face normal) relative to the camera.
+        /// </summary>
+        public Vector3Int GetActiveFaceNormal()
+        {
+            var gm = GridManager.Instance;
+            Vector3 toCam = Camera.main.transform.position - gm.TimelineContainer.position;
+            Vector3 local = Quaternion.Inverse(gm.TimelineContainer.rotation) * toCam;
+            local.y = 0; 
+            local.Normalize();
+            if (Mathf.Abs(local.z) >= Mathf.Abs(local.x))
+                return new Vector3Int(0, 0, local.z > 0 ? 1 : -1);
+            else
+                return new Vector3Int(local.x > 0 ? 1 : -1, 0, 0);
         }
     }
 }
