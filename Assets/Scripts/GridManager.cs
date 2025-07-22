@@ -35,7 +35,6 @@ namespace QuantumConnect
         public float blackHoleChance = 0.1f;
         public float blackHoleWarpDuration = 0.5f;
         public GameObject blackHolePrefab;
-        public AudioClip blackHoleSpawnSFX;
         Dictionary<Vector3Int, BlackHoleData> _blackHoles = new();
         public IReadOnlyDictionary<Vector3Int, BlackHoleData> BlackHoles => _blackHoles;
 
@@ -190,9 +189,7 @@ namespace QuantumConnect
             cellComp.Initialize(src.x, src.y, src.z);
 
             StartCoroutine(WarpInBlackHole(bhGO.transform));
-            if (blackHoleSpawnSFX != null)
-                AudioSource.PlayClipAtPoint(blackHoleSpawnSFX, worldPos);
-
+            AudioManager.Instance.PlayWarp();
             _blackHoles[src] = new BlackHoleData
             {
                 Destination = dst,

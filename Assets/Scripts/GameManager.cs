@@ -43,17 +43,9 @@ namespace QuantumConnect
         public Sprite aiIcon;
         public Button retryButton;
 
-        [Header("Audio Settings")]
-        public AudioClip passThroughSFX;   
-        public AudioClip tokenLandSFX;     
-        public AudioClip winSFX;
-        public AudioClip warpSFX;
-
         public int GetDropY(int x, int z) => FindDropY(x, z);
         public bool IsAITurn => InputManager.Instance.playAgainstAI && _currentPlayer == 1;
         public TokenType[,,] board => _board;
-
-        AudioSource _audioSource;
         TokenType[,,] _board;
         int _currentPlayer;
         bool _isDropping;
@@ -70,8 +62,6 @@ namespace QuantumConnect
             if (Instance != null && Instance != this) Destroy(gameObject);
             else Instance = this;
             DontDestroyOnLoad(this.gameObject);
-
-            _audioSource = GetComponent<AudioSource>() ?? gameObject.AddComponent<AudioSource>();
         }
 
         void Start()
@@ -340,74 +330,110 @@ namespace QuantumConnect
         IEnumerator DropTokenRoutine(int x, int y, int z)
         {
             var gm = GridManager.Instance;
-            TokenType placed = _currentPlayer == 0 ? TokenType.PlayerOne : TokenType.PlayerTwo;
+            TokenType placed = _currentPlayer == 0
+                ? TokenType.PlayerOne
+                : TokenType.PlayerTwo;
 
-            // 1) Spawn at the top of this column:
+            // figure out first empty slot
+            int dropY = GetDropY(x, z);
+
+            // spawn token up above that column
             Vector3 topWorld = gm.GetCellWorldPosition(x, gm.sizeY - 1, z);
-            Vector3 spawnPos = topWorld + Vector3.up * dropHeight;
             GameObject prefab = placed == TokenType.PlayerOne
                 ? playerOneTokenPrefab
                 : (InputManager.Instance.playAgainstAI && _currentPlayer == 1
                     ? aiTokenPrefab
                     : playerTwoTokenPrefab);
-            GameObject token = Instantiate(prefab, spawnPos, prefab.transform.rotation, gm.TimelineContainer);
+            GameObject token = Instantiate(
+                prefab,
+                topWorld + Vector3.up * dropHeight,
+                prefab.transform.rotation,
+                gm.TimelineContainer
+            );
+            AudioManager.Instance.PlayTokenLand();
+            StartCoroutine(BlockFlashRoutine(x, dropY, z));
 
-            // 2) Find if there's a hole in this column, pick the highest one:
+            // find highest black hole in this column (if any)
             Vector3Int? holeSrc = null;
             foreach (var kv in gm.BlackHoles)
             {
                 var src = kv.Key;
-                if (src.x == x && src.z == z)
-                    if (!holeSrc.HasValue || src.y > holeSrc.Value.y)
-                        holeSrc = src;
-            }
-
-            if (holeSrc.HasValue)
-            {
-                var hs = holeSrc.Value;
-                Vector3 holeWorld = gm.GetCellWorldPosition(hs.x, hs.y, hs.z);
-                yield return StartCoroutine(DropVisual(token.transform, holeWorld));         
-
-                _audioSource.PlayOneShot(warpSFX);
-                yield return StartCoroutine(ScaleWarpRoutine(token.transform, holeWorld));
-
-                gm.RemoveBlackHole(hs);
-
-                int xOpp = (hs.x == 0 || hs.x == gm.sizeX - 1) ? gm.sizeX - 1 - hs.x : x;
-                int zOpp = (hs.z == 0 || hs.z == gm.sizeZ - 1) ? gm.sizeZ - 1 - hs.z : z;
-                int dropYOpp = GetDropY(xOpp, zOpp);
-
-                if (dropYOpp >= 0)
+                if (src.x == x && src.z == z &&
+                    (!holeSrc.HasValue || src.y > holeSrc.Value.y))
                 {
-                    Vector3 topOpp = gm.GetCellWorldPosition(xOpp, gm.sizeY - 1, zOpp);
-                    token.transform.position = topOpp + Vector3.up * dropHeight;
-
-                    Vector3 dest = gm.GetCellWorldPosition(xOpp, dropYOpp, zOpp);
-                    yield return StartCoroutine(DropVisual(token.transform, dest));          
-
-                    gm.SetCellVisible(xOpp, dropYOpp, zOpp, false);
-                    _board[xOpp, dropYOpp, zOpp] = placed;
-
-                    x = xOpp; y = dropYOpp; z = zOpp;
-                }
-                else
-                {
-                    token.transform.position = holeWorld;
-                    _board[hs.x, hs.y, hs.z] = placed;
-                    x = hs.x; y = hs.y; z = hs.z;
+                    holeSrc = src;
                 }
             }
-            else
+
+            bool warped = false;
+            Vector3Int hs = holeSrc ?? default;
+
+            // fall loop
+            while (true)
             {
-                Vector3 target = gm.GetCellWorldPosition(x, y, z);
-                yield return StartCoroutine(DropVisual(token.transform, target));
-                gm.SetCellVisible(x, y, z, false);
-                _board[x, y, z] = placed;
+                token.transform.position += Vector3.down * dropSpeed * Time.deltaTime;
+
+                if (!warped && holeSrc.HasValue)
+                {
+                    var holeData = gm.BlackHoles[hs];
+                    float holeY = holeData.Instance.transform.position.y;
+                    if (token.transform.position.y <= holeY)
+                    {
+                        warped = true;
+                        AudioManager.Instance.PlayWarp();
+
+                        yield return StartCoroutine(
+                            ScaleWarpRoutine(token.transform, token.transform.position)
+                        );
+
+                        gm.RemoveBlackHole(hs);
+
+                        // flip to the opposite column
+                        x = (hs.x == 0 || hs.x == gm.sizeX - 1)
+                            ? gm.sizeX - 1 - hs.x
+                            : x;
+                        z = (hs.z == 0 || hs.z == gm.sizeZ - 1)
+                            ? gm.sizeZ - 1 - hs.z
+                            : z;
+
+                        // recompute slot in the new column
+                        dropY = GetDropY(x, z);
+                        // if there is no space on opposite column
+                        if (dropY < 0)
+                        {
+                            dropY = y;  
+                        }
+                        // teleport above that column
+                        Vector3 topOpp = gm.GetCellWorldPosition(x, gm.sizeY - 1, z);
+                        token.transform.position = topOpp + Vector3.up * dropHeight;
+                        AudioManager.Instance.PlayTokenLand();
+                        continue;
+                    }
+                }
+
+                Vector3 targetPos = gm.GetCellWorldPosition(x, dropY, z);
+                if (token.transform.position.y <= targetPos.y + 0.01f)
+                {
+                    token.transform.position = targetPos;
+                    break;
+                }
+
+                yield return null;
             }
 
-            if (CheckWin(x, y, z, placed))
+            _board[x, dropY, z] = placed;
+            var oldCell = gm.cells[x, dropY, z];
+            if (oldCell != null)
             {
-                _audioSource.PlayOneShot(winSFX);
+                var rend = oldCell.GetComponent<MeshRenderer>();
+                if (rend != null) rend.enabled = false;
+            }
+
+            gm.SetCellVisible(x, dropY, z, false);
+
+            if (CheckWin(x, dropY, z, placed))
+            {
+                AudioManager.Instance.PlayWin();
                 _gameOver = true;
                 if (winText != null)
                 {
@@ -458,13 +484,8 @@ namespace QuantumConnect
 
             foreach (var coord in _winningLine)
             {
-                if (coord.x < 0 || coord.x >= gm.sizeX ||
-                    coord.y < 0 || coord.y >= gm.sizeY ||
-                    coord.z < 0 || coord.z >= gm.sizeZ)
-                    continue;
-
                 gm.SetCellVisible(coord.x, coord.y, coord.z, true);
-                _audioSource.PlayOneShot(passThroughSFX);
+                AudioManager.Instance.PlayPassThrough();
                 var cell = gm.cells[coord.x, coord.y, coord.z];
                 if (cell == null) continue;
                 var rend = cell.GetComponent<MeshRenderer>();
@@ -473,20 +494,12 @@ namespace QuantumConnect
                 rend.material.color = Color.green;
                 yield return new WaitForSeconds(0.5f);
                 gm.SetCellVisible(coord.x, coord.y, coord.z, false);
-
                 yield return new WaitForSeconds(blinkInterval);
-
-                for (int x = 0; x < gm.sizeX; x++)
-                    for (int y = 0; y < gm.sizeY; y++)
-                        for (int z = 0; z < gm.sizeZ; z++)
-                            if (_board[x, y, z] == TokenType.None)
-                                gm.SetCellVisible(x, y, z, true);
-
-                if (retryButton != null)
-                    retryButton.gameObject.SetActive(true);
-
             }
-        }
+            if (retryButton != null)
+                retryButton.gameObject.SetActive(true);
+
+    }
 
         /// <summary>
         /// Computes the minimal yaw (around world‐up) to turn the line’s centroid toward the camera (world +Z).
@@ -529,7 +542,7 @@ namespace QuantumConnect
             for (int y = gm.sizeY - 1; y > yDest; y--)
             {
                 gm.SetCellVisible(x, y, z, false);
-                _audioSource.PlayOneShot(passThroughSFX);
+                AudioManager.Instance.PlayPassThrough();
                 yield return new WaitForSeconds(wait);
                 gm.SetCellVisible(x, y, z, true);
             }
@@ -553,16 +566,6 @@ namespace QuantumConnect
                 nx += dir.x; ny += dir.y; nz += dir.z;
             }
             return count;
-        }
-
-        IEnumerator DropVisual(Transform token, Vector3 targetPos)
-        {
-            while (token.position.y > targetPos.y + 0.01f)
-            {
-                token.position += Vector3.down * dropSpeed * Time.deltaTime;
-                yield return null;
-            }
-            token.position = targetPos;
         }
     }
 }
