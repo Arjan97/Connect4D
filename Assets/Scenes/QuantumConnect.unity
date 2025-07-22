@@ -1274,56 +1274,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 921580983}
   m_CullTransparentMesh: 1
---- !u!1 &965861888
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 965861890}
-  - component: {fileID: 965861889}
-  m_Layer: 0
-  m_Name: AudioManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &965861889
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 965861888}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1c99396ad1ef94442b4c103b0d8a7ea0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  passThroughSFX: {fileID: 8300000, guid: c3b8d4caa9f61e449a154b44153e8409, type: 3}
-  tokenLandSFX: {fileID: 8300000, guid: e9771cdd97eec0649a083db864a2bb99, type: 3}
-  winSFX: {fileID: 8300000, guid: b17bab0a5cee263498c802d9891eeb86, type: 3}
-  warpSFX: {fileID: 8300000, guid: 9d5a5739610047c4a87105904e9af2dd, type: 3}
-  blackHoleSpawnSFX: {fileID: 8300000, guid: 823685c5977913349b389b212adfcafa, type: 3}
-  initialPoolSize: 10
---- !u!4 &965861890
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 965861888}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.28821, y: 0, z: 1.11433}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1082141994
 GameObject:
   m_ObjectHideFlags: 0
@@ -2366,6 +2316,63 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 185bf2997a16d5744b836d885d853897, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!1001 &4603177960485496800
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1555779811283079691, guid: e5797f6667c53704eb4d0174952bb522, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -1.28821
+      objectReference: {fileID: 0}
+    - target: {fileID: 1555779811283079691, guid: e5797f6667c53704eb4d0174952bb522, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1555779811283079691, guid: e5797f6667c53704eb4d0174952bb522, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 1.11433
+      objectReference: {fileID: 0}
+    - target: {fileID: 1555779811283079691, guid: e5797f6667c53704eb4d0174952bb522, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1555779811283079691, guid: e5797f6667c53704eb4d0174952bb522, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1555779811283079691, guid: e5797f6667c53704eb4d0174952bb522, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1555779811283079691, guid: e5797f6667c53704eb4d0174952bb522, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1555779811283079691, guid: e5797f6667c53704eb4d0174952bb522, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1555779811283079691, guid: e5797f6667c53704eb4d0174952bb522, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1555779811283079691, guid: e5797f6667c53704eb4d0174952bb522, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7605786857999735417, guid: e5797f6667c53704eb4d0174952bb522, type: 3}
+      propertyPath: m_Name
+      value: AudioManager
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: e5797f6667c53704eb4d0174952bb522, type: 3}
 --- !u!1001 &8188900166392878019
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2438,6 +2445,6 @@ SceneRoots:
   - {fileID: 530026418}
   - {fileID: 434882342}
   - {fileID: 8188900166392878019}
+  - {fileID: 4603177960485496800}
   - {fileID: 1790925035}
   - {fileID: 679210999}
-  - {fileID: 965861890}
