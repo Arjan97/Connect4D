@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace QuantumConnect
@@ -10,10 +11,12 @@ namespace QuantumConnect
         [Tooltip("Seconds AI waits before making its move")] public float moveDelay = 0.7f;
         [Tooltip("Probability (0-1) that AI will rotate the cube on a non-critical turn")][Range(0f, 1f)] public float rotationChance = 0.3f;
         static readonly Vector3Int[] allFaces = new[] {
-            new Vector3Int( 1, 0, 0), new Vector3Int(-1, 0, 0),
-            new Vector3Int( 0, 1, 0), new Vector3Int( 0,-1, 0),
-            new Vector3Int( 0, 0, 1), new Vector3Int( 0, 0,-1)
+        new Vector3Int( 1, 0, 0),
+        new Vector3Int(-1, 0, 0),
+        new Vector3Int( 0, 0, 1),
+        new Vector3Int( 0, 0,-1)
         };
+
         const int MAX_DEPTH = 4;
 
         void Awake()
@@ -35,8 +38,9 @@ namespace QuantumConnect
         List<Vector2Int> GetAllValidMoves()
         {
             var list = new List<Vector2Int>();
-            for (int x = 0; x < GridManager.Instance.sizeX; x++)
-                for (int z = 0; z < GridManager.Instance.sizeZ; z++)
+            var gm = GridManager.Instance;
+            for (int x = 0; x < gm.sizeX; x++)
+                for (int z = 0; z < gm.sizeZ; z++)
                     if (GameManager.Instance.GetDropY(x, z) >= 0)
                         list.Add(new Vector2Int(x, z));
             return list;
@@ -138,14 +142,14 @@ namespace QuantumConnect
                 yield break;
             }
 
-            //mini max move
+            var candidates = GetSideValidMoves();
             Vector2Int bestMove = new Vector2Int(-1, -1);
             int bestScore = int.MinValue;
-            foreach (var m in GetAllValidMoves())
+            foreach (var m in candidates)
             {
-                mgr.ApplyMove(m.x, m.y, TokenType.PlayerTwo);
+                GameManager.Instance.ApplyMove(m.x, m.y, TokenType.PlayerTwo);
                 int score = Minimax(MAX_DEPTH - 1, false);
-                mgr.UndoMove(m.x, m.y);
+                GameManager.Instance.UndoMove(m.x, m.y);
 
                 if (score > bestScore)
                 {
@@ -160,25 +164,39 @@ namespace QuantumConnect
             yield return new WaitForSeconds(0.2f);
             yield return DropAt(bestMove.x, bestMove.y);
         }
+        List<Vector2Int> GetSideValidMoves()
+        {
+            var all = GetAllValidMoves();
+            var sides = all.Where(m => IsSideColumn(m.x, m.y)).ToList();
+            return sides.Count > 0 ? sides : all;
+        }
 
         // Collect playable drops on a given face normal
         List<Vector2Int> CollectMovesOnFace(Vector3Int face)
         {
             var gm = GridManager.Instance;
-            var list = new List<Vector2Int>();
+            var board = GameManager.Instance.board;
+            var moves = new List<Vector2Int>();
+
             for (int x = 0; x < gm.sizeX; x++)
                 for (int z = 0; z < gm.sizeZ; z++)
                 {
                     int y = GameManager.Instance.GetDropY(x, z);
                     if (y < 0) continue;
-                    if (gm.cells[x, y, z] == null) continue; 
-                    if ((face.x == -1 && x != 0) || (face.x == 1 && x != gm.sizeX - 1)) continue;
-                    if ((face.y == -1 && y != 0) || (face.y == 1 && y != gm.sizeY - 1)) continue;
-                    if ((face.z == -1 && z != 0) || (face.z == 1 && z != gm.sizeZ - 1)) continue;
-                    list.Add(new Vector2Int(x, z));
+
+                    var coord = new Vector3Int(x, y, z);
+
+                    if (!gm.IsOnFace(coord, face)) continue;
+
+                    if (gm.cells[x, y, z] == null) continue;
+                    if (board[x, y, z] != TokenType.None) continue;
+
+                    moves.Add(new Vector2Int(x, z));
                 }
-            return list;
+
+            return moves;
         }
+
 
         /// <summary>
         /// Rotates the TimelineContainer in discrete 90° increments
@@ -227,6 +245,14 @@ namespace QuantumConnect
                 yield return gm.AnimateContainerRotation(Vector3.up, 90f);
                 yield return new WaitForSeconds(0.2f);
             }
+        }
+        bool IsSideColumn(int x, int z)
+        {
+            var gm = GridManager.Instance;
+            return x == 0
+                || x == gm.sizeX - 1
+                || z == 0
+                || z == gm.sizeZ - 1;
         }
         Vector3Int DetermineFaceForDrop(int x, int z)
         {

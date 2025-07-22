@@ -7,11 +7,6 @@ using UnityEngine.UI;
 namespace QuantumConnect
 {
     /// <summary>
-    /// Possible contents of a grid cell.
-    /// </summary>
-    public enum TokenType { None, PlayerOne, PlayerTwo }
-
-    /// <summary>
     /// Central game controller: handles board state, rotations, and token placement.
     /// </summary>
     public class GameManager : MonoBehaviour
@@ -371,11 +366,16 @@ namespace QuantumConnect
             // fall loop
             while (true)
             {
+                if (token == null)
+                    yield break;
                 token.transform.position += Vector3.down * dropSpeed * Time.deltaTime;
 
                 if (!warped && holeSrc.HasValue)
                 {
                     var holeData = gm.BlackHoles[hs];
+                    if (holeData == null)
+                        yield break;
+
                     float holeY = holeData.Instance.transform.position.y;
                     if (token.transform.position.y <= holeY)
                     {
@@ -427,6 +427,7 @@ namespace QuantumConnect
             {
                 var rend = oldCell.GetComponent<MeshRenderer>();
                 if (rend != null) rend.enabled = false;
+                gm.cells[x, dropY, z] = null;
             }
 
             gm.SetCellVisible(x, dropY, z, false);
@@ -474,32 +475,32 @@ namespace QuantumConnect
         }
         IEnumerator HighlightWinLineRoutine()
         {
-            if (_winningLine == null) yield break;
+            if (_winningLine == null || _winningLine.Count == 0)
+                yield break;
+
             var gm = GridManager.Instance;
 
             float snapAngle = ComputeSnapAngleToFaceWinningLine();
             yield return StartCoroutine(
-                GridManager.Instance.AnimateContainerRotation(Vector3.up, snapAngle)
+                gm.AnimateContainerRotation(Vector3.up, snapAngle)
             );
 
             foreach (var coord in _winningLine)
             {
                 gm.SetCellVisible(coord.x, coord.y, coord.z, true);
-                AudioManager.Instance.PlayPassThrough();
                 var cell = gm.cells[coord.x, coord.y, coord.z];
-                if (cell == null) continue;
-                var rend = cell.GetComponent<MeshRenderer>();
-                if (rend == null) continue;
-
-                rend.material.color = Color.green;
-                yield return new WaitForSeconds(0.5f);
-                gm.SetCellVisible(coord.x, coord.y, coord.z, false);
-                yield return new WaitForSeconds(blinkInterval);
+                if (cell != null)
+                    cell.GetComponent<MeshRenderer>().material.color = Color.green;
             }
-            if (retryButton != null)
-                retryButton.gameObject.SetActive(true);
 
-    }
+            yield return new WaitForSeconds(1f);
+
+            foreach (var coord in _winningLine)
+                gm.SetCellVisible(coord.x, coord.y, coord.z, false);
+
+            retryButton.gameObject.SetActive(true);
+        }
+
 
         /// <summary>
         /// Computes the minimal yaw (around world‐up) to turn the line’s centroid toward the camera (world +Z).
@@ -509,9 +510,23 @@ namespace QuantumConnect
             var gm = GridManager.Instance;
             var container = gm.TimelineContainer;
 
+            Vector3 offset = new Vector3(
+                (gm.sizeX - 1) * gm.cellSpacing.x * 0.5f,
+                (gm.sizeY - 1) * gm.cellSpacing.y * 0.5f,
+                (gm.sizeZ - 1) * gm.cellSpacing.z * 0.5f
+            );
+
+            // Sum up world‐positions of each winning‐line 
             Vector3 sum = Vector3.zero;
             foreach (var c in _winningLine)
-                sum += gm.GetCellWorldPosition(c.x, c.y, c.z);
+            {
+                Vector3 local = new Vector3(
+                    c.x * gm.cellSpacing.x,
+                    c.y * gm.cellSpacing.y,
+                    c.z * gm.cellSpacing.z
+                ) - offset;
+                sum += container.TransformPoint(local);
+            }
             Vector3 centroid = sum / _winningLine.Count;
 
             Vector3 dir = centroid - container.position;
@@ -520,22 +535,17 @@ namespace QuantumConnect
             dir.Normalize();
 
             Vector3 localDir = Quaternion.Inverse(container.rotation) * dir;
-
             float targetY;
             if (Mathf.Abs(localDir.z) >= Mathf.Abs(localDir.x))
-            {
                 targetY = (localDir.z >= 0f) ? 180f : 0f;
-            }
             else
-            {
                 targetY = (localDir.x >= 0f) ? 90f : -90f;
-            }
 
             float currentY = container.eulerAngles.y;
             return Mathf.DeltaAngle(currentY, targetY);
         }
 
-            IEnumerator BlockFlashRoutine(int x, int yDest, int z)
+        IEnumerator BlockFlashRoutine(int x, int yDest, int z)
         {
             var gm = GridManager.Instance;
             float wait = gm.cellSpacing.y / dropSpeed;

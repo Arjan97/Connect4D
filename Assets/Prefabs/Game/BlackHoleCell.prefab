@@ -164,7 +164,7 @@ ParticleSystem:
   m_GameObject: {fileID: 3860216810526617579}
   serializedVersion: 8
   lengthInSec: 5
-  simulationSpeed: 1.45
+  simulationSpeed: 0.3
   stopAction: 0
   cullingMode: 0
   ringBufferMode: 0
@@ -238,7 +238,7 @@ ParticleSystem:
     startLifetime:
       serializedVersion: 2
       minMaxState: 0
-      scalar: 1.73
+      scalar: 1.12
       minScalar: 5
       maxCurve:
         serializedVersion: 2
@@ -291,7 +291,7 @@ ParticleSystem:
     startSpeed:
       serializedVersion: 2
       minMaxState: 0
-      scalar: -0.07
+      scalar: -0.33
       minScalar: 5
       maxCurve:
         serializedVersion: 2
@@ -674,7 +674,7 @@ ParticleSystem:
     startRotation:
       serializedVersion: 2
       minMaxState: 0
-      scalar: 1.7983873
+      scalar: 0
       minScalar: 0
       maxCurve:
         serializedVersion: 2
@@ -724,16 +724,16 @@ ParticleSystem:
         m_PreInfinity: 2
         m_PostInfinity: 2
         m_RotationOrder: 4
-    randomizeRotationDirection: 0.94
+    randomizeRotationDirection: 0
     gravitySource: 1
-    maxNumParticles: 1000
+    maxNumParticles: 10
     customEmitterVelocity: {x: 0, y: 0, z: 0}
     size3D: 0
     rotation3D: 0
     gravityModifier:
       serializedVersion: 2
       minMaxState: 0
-      scalar: 0
+      scalar: -0.27
       minScalar: 0
       maxCurve:
         serializedVersion: 2
@@ -794,7 +794,7 @@ ParticleSystem:
     donutRadius: 0.46
     m_Position: {x: 0, y: 0, z: 0}
     m_Rotation: {x: 0, y: 0, z: 0}
-    m_Scale: {x: -0.82, y: 1.15, z: 0.81}
+    m_Scale: {x: 1.05, y: 0.64, z: 0.81}
     placementMode: 0
     m_MeshMaterialIndex: 0
     m_MeshNormalOffset: 0
@@ -873,7 +873,7 @@ ParticleSystem:
     sphericalDirectionAmount: 0.57
     randomPositionAmount: 1.01
     radius:
-      value: 0.5
+      value: 0.89
       mode: 0
       spread: 0
       speed:
@@ -932,7 +932,7 @@ ParticleSystem:
     arc:
       value: 360
       mode: 0
-      spread: 0.38
+      spread: 0.06
       speed:
         serializedVersion: 2
         minMaxState: 0
@@ -992,7 +992,7 @@ ParticleSystem:
     rateOverTime:
       serializedVersion: 2
       minMaxState: 0
-      scalar: 15.3
+      scalar: 10.5
       minScalar: 10
       maxCurve:
         serializedVersion: 2
@@ -1045,7 +1045,7 @@ ParticleSystem:
     rateOverDistance:
       serializedVersion: 2
       minMaxState: 0
-      scalar: 0.04
+      scalar: 11.2
       minScalar: 0
       maxCurve:
         serializedVersion: 2
@@ -1098,12 +1098,12 @@ ParticleSystem:
     m_BurstCount: 0
     m_Bursts: []
   SizeModule:
-    enabled: 0
+    enabled: 1
     curve:
       serializedVersion: 2
-      minMaxState: 1
-      scalar: 1
-      minScalar: 1
+      minMaxState: 3
+      scalar: 1.89
+      minScalar: 0.32
       maxCurve:
         serializedVersion: 2
         m_Curve:
@@ -1154,7 +1154,7 @@ ParticleSystem:
         m_RotationOrder: 4
     y:
       serializedVersion: 2
-      minMaxState: 1
+      minMaxState: 3
       scalar: 1
       minScalar: 1
       maxCurve:
@@ -1207,7 +1207,7 @@ ParticleSystem:
         m_RotationOrder: 4
     z:
       serializedVersion: 2
-      minMaxState: 1
+      minMaxState: 3
       scalar: 1
       minScalar: 1
       maxCurve:

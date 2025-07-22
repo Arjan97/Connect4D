@@ -127,7 +127,23 @@ namespace QuantumConnect
 
         /// <summary>Returns the world-space position of the cell at (x,y,z).</summary>
         public Vector3 GetCellWorldPosition(int x, int y, int z)
-            => cells[x, y, z].transform.position;
+        {
+            var cell = cells[x, y, z];
+            if (cell != null)
+                return cell.transform.position;
+
+            Vector3 centerOffset = new Vector3(
+                (sizeX - 1) * cellSpacing.x * 0.5f,
+                (sizeY - 1) * cellSpacing.y * 0.5f,
+                (sizeZ - 1) * cellSpacing.z * 0.5f
+            );
+            Vector3 local = new Vector3(
+                x * cellSpacing.x,
+                y * cellSpacing.y,
+                z * cellSpacing.z
+            ) - centerOffset;
+            return TimelineContainer.TransformPoint(local);
+        }
 
         /// <summary>
         /// Smoothly rotates the TimelineContainer around its own center.
@@ -148,14 +164,18 @@ namespace QuantumConnect
         }
         void MarkBlackHolesInitial()
         {
+            var face = InputManager.Instance.GetActiveFaceNormal();
             foreach (Cell c in cells)
             {
                 if (c == null) continue;
                 var src = new Vector3Int(c.X, c.Y, c.Z);
+                if (!IsOnFace(src, face))
+                    continue;
                 if (Random.value < blackHoleChance)
                     CreateBlackHoleAt(src);
             }
         }
+
         void CreateBlackHoleAt(Vector3Int src)
         {
             var candidates = new List<Vector3Int>();
@@ -232,18 +252,39 @@ namespace QuantumConnect
 
             var choices = new List<Vector3Int>();
             var board = GameManager.Instance.board;
+            var face = InputManager.Instance.GetActiveFaceNormal();
+
             foreach (Cell c in cells)
             {
                 if (c == null) continue;
                 var coord = new Vector3Int(c.X, c.Y, c.Z);
                 if (board[coord.x, coord.y, coord.z] != TokenType.None) continue;
                 if (_blackHoles.ContainsKey(coord)) continue;
+                if (face.x != 0 && coord.x != (face.x > 0 ? sizeX - 1 : 0)) continue;
+                if (face.z != 0 && coord.z != (face.z > 0 ? sizeZ - 1 : 0)) continue;
                 choices.Add(coord);
             }
             if (choices.Count == 0) return;
 
             CreateBlackHoleAt(choices[Random.Range(0, choices.Count)]);
         }
+
+        /// <summary>
+        /// Move only on the outer cells of the given face.
+        /// </summary>
+        public bool IsOnFace(Vector3Int coord, Vector3Int face)
+        {
+            // X-faces
+            if (face.x < 0 && coord.x != 0) return false;
+            if (face.x > 0 && coord.x != sizeX - 1) return false;
+            // Z-faces
+            if (face.z < 0 && coord.z != 0) return false;
+            if (face.z > 0 && coord.z != sizeZ - 1) return false;
+
+
+            return true;
+        }
+
         IEnumerator WarpInBlackHole(Transform tf)
         {
             Vector3 targetScale = Vector3.one;
