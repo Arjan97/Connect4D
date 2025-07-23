@@ -193,6 +193,8 @@ namespace QuantumConnect
             UpdateTurnUI();
 
             GridManager.Instance.ResetGrid();
+            if (mode == GameMode.AIvAI)
+                StartCoroutine(AIvAICoroutine());
         }
 
         /// <summary>
