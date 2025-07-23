@@ -99,7 +99,7 @@ namespace QuantumConnect
                 return best;
             }
         }
-        IEnumerator MakeMoveRoutine()
+        public IEnumerator MakeMoveRoutine()
         {
             yield return new WaitForSeconds(moveDelay);
             var mgr = GameManager.Instance;
@@ -175,7 +175,7 @@ namespace QuantumConnect
         List<Vector2Int> CollectMovesOnFace(Vector3Int face)
         {
             var gm = GridManager.Instance;
-            var board = GameManager.Instance.board;
+            var board = GameManager.Instance.Board;
             var moves = new List<Vector2Int>();
 
             for (int x = 0; x < gm.sizeX; x++)

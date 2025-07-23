@@ -12,6 +12,8 @@ namespace QuantumConnect
     public class GameManager : MonoBehaviour
     {
         public static GameManager Instance { get; private set; }
+        [Header("Game Mode")]
+        public GameMode mode = GameMode.PvAI;
 
         [Header("Token Prefabs")]
         public GameObject playerOneTokenPrefab;
@@ -39,8 +41,13 @@ namespace QuantumConnect
         public Button retryButton;
 
         public int GetDropY(int x, int z) => FindDropY(x, z);
-        public bool IsAITurn => InputManager.Instance.playAgainstAI && _currentPlayer == 1;
-        public TokenType[,,] board => _board;
+        public TokenType[,,] Board => _board;
+ 
+        public bool IsAITurn =>
+            mode == GameMode.PvAI && _currentPlayer == 1
+            || mode == GameMode.AIvAI;
+
+
         TokenType[,,] _board;
         int _currentPlayer;
         bool _isDropping;
@@ -57,6 +64,8 @@ namespace QuantumConnect
             if (Instance != null && Instance != this) Destroy(gameObject);
             else Instance = this;
             DontDestroyOnLoad(this.gameObject);
+
+            mode = InputManager.Instance.selectedMode;
         }
 
         void Start()
@@ -76,6 +85,9 @@ namespace QuantumConnect
             UpdateTurnUI();
             UpdateScoreUI();
             GridManager.Instance.InitializeBlackHoles();
+            if (mode == GameMode.AIvAI)
+                StartCoroutine(AIvAICoroutine());
+
         }
 
         /// <summary>
@@ -83,7 +95,7 @@ namespace QuantumConnect
         /// </summary>
         void UpdateTurnUI()
         {
-            bool vsAI = InputManager.Instance.playAgainstAI;
+            bool vsAI = (mode == GameMode.PvAI);
             if (turnText != null)
             {
                 if (_currentPlayer == 0)
@@ -120,9 +132,10 @@ namespace QuantumConnect
         {
             if (scoreText != null)
             {
-                bool vsAI = InputManager.Instance.playAgainstAI;
-                string secondLabel = vsAI ? "AI" : "P2";
-                scoreText.text = $"P1: {_playerOneScore}   {secondLabel}: {_playerTwoScore}";
+                if (scoreText == null) return;
+                bool vsAI = mode == GameMode.PvAI;
+                string second = vsAI ? "AI" : "P2";
+                scoreText.text = $"P1: {_playerOneScore}   {second}: {_playerTwoScore}";
             }
         }
 
@@ -131,7 +144,7 @@ namespace QuantumConnect
         /// </summary>
         public void RotateLeft()
         {
-            if (InputManager.Instance.playAgainstAI && _currentPlayer == 1) return;
+            if ((mode == GameMode.PvAI && _currentPlayer == 1) || (mode == GameMode.AIvAI)) return;
             if (_isDropping) return;
             StartCoroutine(GridManager.Instance.AnimateContainerRotation(Vector3Int.up, 90f));
         }
@@ -141,7 +154,7 @@ namespace QuantumConnect
         /// </summary>
         public void RotateRight()
         {
-            if (InputManager.Instance.playAgainstAI && _currentPlayer == 1) return;
+            if ((mode == GameMode.PvAI && _currentPlayer == 1) || (mode == GameMode.AIvAI)) return;
             if (_isDropping) return;
             StartCoroutine(GridManager.Instance.AnimateContainerRotation(Vector3Int.up, -90f));
         }
@@ -329,26 +342,25 @@ namespace QuantumConnect
                 ? TokenType.PlayerOne
                 : TokenType.PlayerTwo;
 
-            // figure out first empty slot
             int dropY = GetDropY(x, z);
 
-            // spawn token up above that column
             Vector3 topWorld = gm.GetCellWorldPosition(x, gm.sizeY - 1, z);
-            GameObject prefab = placed == TokenType.PlayerOne
+            GameObject prefab = _currentPlayer == 0
                 ? playerOneTokenPrefab
-                : (InputManager.Instance.playAgainstAI && _currentPlayer == 1
-                    ? aiTokenPrefab
-                    : playerTwoTokenPrefab);
+                : (mode == GameMode.AIvAI
+                    ? playerTwoTokenPrefab
+                    : aiTokenPrefab);
+
             GameObject token = Instantiate(
                 prefab,
                 topWorld + Vector3.up * dropHeight,
                 prefab.transform.rotation,
                 gm.TimelineContainer
             );
+
             AudioManager.Instance.PlayTokenLand();
             StartCoroutine(BlockFlashRoutine(x, dropY, z));
 
-            // find highest black hole in this column (if any)
             Vector3Int? holeSrc = null;
             foreach (var kv in gm.BlackHoles)
             {
@@ -363,7 +375,6 @@ namespace QuantumConnect
             bool warped = false;
             Vector3Int hs = holeSrc ?? default;
 
-            // fall loop
             while (true)
             {
                 if (token == null)
@@ -457,7 +468,7 @@ namespace QuantumConnect
                 _gameOver = true;
                 if (winText != null)
                 {
-                    bool vsAI = InputManager.Instance.playAgainstAI;
+                    bool vsAI = (GameManager.Instance.mode == GameMode.PvAI);
                     if (placed == TokenType.PlayerOne)
                     {
                         winText.text = "Player One Won!";
@@ -479,7 +490,7 @@ namespace QuantumConnect
             _currentPlayer = 1 - _currentPlayer;
             UpdateTurnUI();
             GridManager.Instance.TrySpawnRandomBlackHole();
-            if (InputManager.Instance.playAgainstAI && _currentPlayer == 1)
+            if ((mode == GameMode.PvAI && _currentPlayer == 1) || (mode == GameMode.AIvAI))
             {
                 StartCoroutine(AIDelayAndMoveRoutine());
                 yield break; 
@@ -545,7 +556,13 @@ namespace QuantumConnect
                     rend.material.color = Color.green;
                 }
             }
+            if (mode == GameMode.AIvAI)
+            {
+                yield return new WaitForSeconds(1.5f);
 
+                ResetGame(keepScores: true);
+                yield break;
+            }
             if (retryButton != null)
                 retryButton.gameObject.SetActive(true);
         }
@@ -625,5 +642,20 @@ namespace QuantumConnect
             }
             return count;
         }
+        IEnumerator AIvAICoroutine()
+        {
+            yield return null; 
+
+            while (!_gameOver)
+            {
+                yield return AIManager.Instance.MakeMoveRoutine();
+
+                while (_isDropping)
+                    yield return null;
+
+                yield return new WaitForSeconds(0.2f);
+            }
+        }
+
     }
 }

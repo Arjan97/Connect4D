@@ -174,7 +174,7 @@ namespace QuantumConnect
                     for (int z = 0; z < sizeZ; z++)
                     {
                         if (cells[x, y, z] != null &&
-                            GameManager.Instance.board[x, y, z] == TokenType.None)
+                            GameManager.Instance.Board[x, y, z] == TokenType.None)
                             avail.Add(new Vector3Int(x, y, z));
                     }
 
@@ -213,16 +213,10 @@ namespace QuantumConnect
                 Quaternion.identity,
                 TimelineContainer
             );
-            var template = cellPrefab.GetComponent<BoxCollider>();
-            if (template != null)
-            {
-                var bc = bhGO.AddComponent<BoxCollider>();
-                bc.size = template.size;
-                bc.center = template.center;
-            }
-            bhGO.transform.localScale = Vector3.zero;
+
             var cellComp = bhGO.AddComponent<Cell>();
             cellComp.Initialize(src.x, src.y, src.z);
+            cells[src.x, src.y, src.z] = cellComp;
 
             StartCoroutine(WarpInBlackHole(bhGO.transform));
             AudioManager.Instance.PlayWarp();
@@ -270,7 +264,7 @@ namespace QuantumConnect
             for (int x = 0; x < sizeX; x++)
                 for (int y = 0; y < sizeY; y++)
                     for (int z = 0; z < sizeZ; z++)
-                        if (cells[x, y, z] != null && GameManager.Instance.board[x, y, z] == TokenType.None)
+                        if (cells[x, y, z] != null && GameManager.Instance.Board[x, y, z] == TokenType.None)
                             emptyCount++;
             if (emptyCount < 10) return;           
 
@@ -283,7 +277,7 @@ namespace QuantumConnect
                     {
                         var c = new Vector3Int(x, y, z);
                         if (cells[x, y, z] == null) continue;
-                        if (GameManager.Instance.board[x, y, z] != TokenType.None) continue;
+                        if (GameManager.Instance.Board[x, y, z] != TokenType.None) continue;
                         if (_blackHoles.ContainsKey(c)) continue;
                         choices.Add(c);
                     }

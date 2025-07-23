@@ -11,7 +11,7 @@ namespace QuantumConnect
     public class InputManager : MonoBehaviour
     {
         public static InputManager Instance { get; private set; }
-        public bool playAgainstAI = false;
+        public GameMode selectedMode = GameMode.PvAI;
 
         void Awake()
         {
@@ -30,9 +30,15 @@ namespace QuantumConnect
 
         void HandleLeftClick()
         {
-            if (playAgainstAI && GameManager.Instance != null && GameManager.Instance.IsAITurn)
+            if (GameManager.Instance == null)
                 return;
 
+            if (GameManager.Instance.mode == GameMode.PvAI
+       && GameManager.Instance.IsAITurn)
+                return;
+
+            if (GameManager.Instance.mode == GameMode.AIvAI)
+                return;
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
                 return;
 
@@ -42,8 +48,9 @@ namespace QuantumConnect
             if (!Physics.Raycast(ray, out var hit))
                 return;
 
-            if (!hit.collider.TryGetComponent<Cell>(out var cell))
-                return;
+            Cell cell = hit.collider.GetComponent<Cell>()
+          ?? hit.collider.GetComponentInParent<Cell>();
+            if (cell == null) return;
 
             var coord = new Vector3Int(cell.X, cell.Y, cell.Z);
             bool isWarp = GridManager.Instance.BlackHoles.ContainsKey(coord);
@@ -94,13 +101,9 @@ namespace QuantumConnect
                 GameManager.Instance.ResetGame();
         }
 
-        /// <summary>
-        /// Call from main menu UI to choose AI opponent.
-        /// </summary>
-        public void SetPlayAgainstAI(bool useAI)
-        {
-            playAgainstAI = useAI;
-        }
+        public void SetMode_PvP() => selectedMode = GameMode.PvP;
+        public void SetMode_PvAI() => selectedMode = GameMode.PvAI;
+        public void SetMode_AIvAI() => selectedMode = GameMode.AIvAI;
 
         /// <summary>
         /// Determines which face of the grid is active (face normal) relative to the camera.

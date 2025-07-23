@@ -4,6 +4,6 @@ namespace QuantumConnect
     {
         PvP,    
         PvAI,   
-        AIVsAI  
+        AIvAI  
     }
 }
