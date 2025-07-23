@@ -39,13 +39,16 @@ namespace QuantumConnect
             if (Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame)
                 return;
             Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
-            if (!Physics.Raycast(ray, out var hit, 100f))
+            if (!Physics.Raycast(ray, out var hit))
                 return;
 
             if (!hit.collider.TryGetComponent<Cell>(out var cell))
                 return;
 
-            if (!IsCellOnFrontFace(cell))
+            var coord = new Vector3Int(cell.X, cell.Y, cell.Z);
+            bool isWarp = GridManager.Instance.BlackHoles.ContainsKey(coord);
+
+            if (!isWarp && !IsCellOnFrontFace(cell))
                 return;
 
             GameManager.Instance.HandleCellClick(cell.X, cell.Z);

@@ -31,8 +31,9 @@ namespace QuantumConnect
         public Vector3 cellSpacing = new Vector3(1.8f, 1.8f, 1.8f);
 
         [Header("Black Hole Settings")]
-        [Range(0f, 1f)]
-        public float blackHoleChance = 0.1f;
+        [Range(0, 1)] public float blackHoleChance = 0.1f;
+        public int minBlackHoles = 2;
+        public int maxBlackHoles = 6;
         public float blackHoleWarpDuration = 0.5f;
         public GameObject blackHolePrefab;
         Dictionary<Vector3Int, BlackHoleData> _blackHoles = new();
@@ -78,7 +79,6 @@ namespace QuantumConnect
                 for (int y = 0; y < sizeY; y++)
                     for (int z = 0; z < sizeZ; z++)
                     {
-                        // only build if on any of the six faces:
                         bool isOuter = x == 0 || x == sizeX - 1
                                     || y == 0 || y == sizeY - 1
                                     || z == 0 || z == sizeZ - 1;
@@ -98,7 +98,6 @@ namespace QuantumConnect
                         cell.Initialize(x, y, z);
                         cells[x, y, z] = cell;
                     }
-            MarkBlackHolesInitial();
         }
 
         /// <summary>
@@ -106,10 +105,9 @@ namespace QuantumConnect
         /// </summary>
         public void ResetGrid()
         {
-            if (TimelineContainer != null)
-                Destroy(TimelineContainer.gameObject);
-
+            if (TimelineContainer != null) Destroy(TimelineContainer.gameObject);
             SpawnGrid();
+            InitializeBlackHoles();
         }
 
         /// <summary>
@@ -162,17 +160,30 @@ namespace QuantumConnect
             }
             TimelineContainer.RotateAround(pivot, axis, angle - (angle / duration) * elapsed);
         }
-        void MarkBlackHolesInitial()
+
+        /// <summary>Clears any existing holes and spawns between min and max new ones.</summary>
+        public void InitializeBlackHoles()
         {
-            var face = InputManager.Instance.GetActiveFaceNormal();
-            foreach (Cell c in cells)
+            foreach (var kv in _blackHoles.Values)
+                Destroy(kv.Instance);
+            _blackHoles.Clear();
+
+            var avail = new List<Vector3Int>();
+            for (int x = 0; x < sizeX; x++)
+                for (int y = 0; y < sizeY; y++)
+                    for (int z = 0; z < sizeZ; z++)
+                    {
+                        if (cells[x, y, z] != null &&
+                            GameManager.Instance.board[x, y, z] == TokenType.None)
+                            avail.Add(new Vector3Int(x, y, z));
+                    }
+
+            int count = Random.Range(minBlackHoles, Mathf.Min(maxBlackHoles, avail.Count) + 1);
+            for (int i = 0; i < count; i++)
             {
-                if (c == null) continue;
-                var src = new Vector3Int(c.X, c.Y, c.Z);
-                if (!IsOnFace(src, face))
-                    continue;
-                if (Random.value < blackHoleChance)
-                    CreateBlackHoleAt(src);
+                int idx = Random.Range(0, avail.Count);
+                CreateBlackHoleAt(avail[idx]);
+                avail.RemoveAt(idx);
             }
         }
 
@@ -202,9 +213,14 @@ namespace QuantumConnect
                 Quaternion.identity,
                 TimelineContainer
             );
+            var template = cellPrefab.GetComponent<BoxCollider>();
+            if (template != null)
+            {
+                var bc = bhGO.AddComponent<BoxCollider>();
+                bc.size = template.size;
+                bc.center = template.center;
+            }
             bhGO.transform.localScale = Vector3.zero;
-
-            bhGO.AddComponent<BoxCollider>();
             var cellComp = bhGO.AddComponent<Cell>();
             cellComp.Initialize(src.x, src.y, src.z);
 
@@ -248,24 +264,30 @@ namespace QuantumConnect
 
         public void TrySpawnRandomBlackHole()
         {
+            if (_blackHoles.Count >= maxBlackHoles) return;
+
+            int emptyCount = 0;
+            for (int x = 0; x < sizeX; x++)
+                for (int y = 0; y < sizeY; y++)
+                    for (int z = 0; z < sizeZ; z++)
+                        if (cells[x, y, z] != null && GameManager.Instance.board[x, y, z] == TokenType.None)
+                            emptyCount++;
+            if (emptyCount < 10) return;           
+
             if (Random.value >= blackHoleChance) return;
 
             var choices = new List<Vector3Int>();
-            var board = GameManager.Instance.board;
-            var face = InputManager.Instance.GetActiveFaceNormal();
-
-            foreach (Cell c in cells)
-            {
-                if (c == null) continue;
-                var coord = new Vector3Int(c.X, c.Y, c.Z);
-                if (board[coord.x, coord.y, coord.z] != TokenType.None) continue;
-                if (_blackHoles.ContainsKey(coord)) continue;
-                if (face.x != 0 && coord.x != (face.x > 0 ? sizeX - 1 : 0)) continue;
-                if (face.z != 0 && coord.z != (face.z > 0 ? sizeZ - 1 : 0)) continue;
-                choices.Add(coord);
-            }
+            for (int x = 0; x < sizeX; x++)
+                for (int y = 0; y < sizeY; y++)
+                    for (int z = 0; z < sizeZ; z++)
+                    {
+                        var c = new Vector3Int(x, y, z);
+                        if (cells[x, y, z] == null) continue;
+                        if (GameManager.Instance.board[x, y, z] != TokenType.None) continue;
+                        if (_blackHoles.ContainsKey(c)) continue;
+                        choices.Add(c);
+                    }
             if (choices.Count == 0) return;
-
             CreateBlackHoleAt(choices[Random.Range(0, choices.Count)]);
         }
 
@@ -274,13 +296,10 @@ namespace QuantumConnect
         /// </summary>
         public bool IsOnFace(Vector3Int coord, Vector3Int face)
         {
-            // X-faces
             if (face.x < 0 && coord.x != 0) return false;
             if (face.x > 0 && coord.x != sizeX - 1) return false;
-            // Z-faces
             if (face.z < 0 && coord.z != 0) return false;
             if (face.z > 0 && coord.z != sizeZ - 1) return false;
-
 
             return true;
         }
@@ -291,7 +310,6 @@ namespace QuantumConnect
             float half = blackHoleWarpDuration * 0.5f;
             float t = 0f;
 
-            // scale up
             while (t < blackHoleWarpDuration)
             {
                 tf.localScale = Vector3.Lerp(

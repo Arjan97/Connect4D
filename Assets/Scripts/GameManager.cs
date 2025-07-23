@@ -75,7 +75,7 @@ namespace QuantumConnect
             }
             UpdateTurnUI();
             UpdateScoreUI();
-
+            GridManager.Instance.InitializeBlackHoles();
         }
 
         /// <summary>
@@ -422,12 +422,31 @@ namespace QuantumConnect
             }
 
             _board[x, dropY, z] = placed;
+            bool anyEmpty = false;
+            for (int xx = 0; xx < gm.sizeX; xx++)
+                for (int yy = 0; yy < gm.sizeY; yy++)
+                    for (int zz = 0; zz < gm.sizeZ; zz++)
+                        if (_board[xx, yy, zz] == TokenType.None)
+                        {
+                            anyEmpty = true;
+                            goto DoneChecking;
+                        }
+                    DoneChecking:
+            if (!anyEmpty && !_gameOver)
+            {
+                _gameOver = true;
+                winText.text = "Draw!";
+                winText.color = Color.white;
+                winText.gameObject.SetActive(true);
+                retryButton.gameObject.SetActive(true);
+                yield break;
+            }
+
             var oldCell = gm.cells[x, dropY, z];
             if (oldCell != null)
             {
                 var rend = oldCell.GetComponent<MeshRenderer>();
                 if (rend != null) rend.enabled = false;
-                gm.cells[x, dropY, z] = null;
             }
 
             gm.SetCellVisible(x, dropY, z, false);
@@ -490,17 +509,46 @@ namespace QuantumConnect
                 gm.SetCellVisible(coord.x, coord.y, coord.z, true);
                 var cell = gm.cells[coord.x, coord.y, coord.z];
                 if (cell != null)
-                    cell.GetComponent<MeshRenderer>().material.color = Color.green;
+                {
+                    var rend = cell.GetComponent<MeshRenderer>();
+                    rend.enabled = true;
+                    rend.material.color = Color.green;
+                    AudioManager.Instance.PlayPassThrough();  
+                }
+                yield return new WaitForSeconds(blinkInterval);
             }
 
-            yield return new WaitForSeconds(1f);
+            for (int i = 0; i < 3; i++)
+            {
+                foreach (var coord in _winningLine)
+                    gm.SetCellVisible(coord.x, coord.y, coord.z, false);
+                yield return new WaitForSeconds(blinkInterval);
+
+                foreach (var coord in _winningLine)
+                {
+                    gm.SetCellVisible(coord.x, coord.y, coord.z, true);
+                    var cell = gm.cells[coord.x, coord.y, coord.z];
+                    if (cell != null)
+                        cell.GetComponent<MeshRenderer>().material.color = Color.green;
+                }
+                yield return new WaitForSeconds(blinkInterval);
+            }
 
             foreach (var coord in _winningLine)
-                gm.SetCellVisible(coord.x, coord.y, coord.z, false);
+            {
+                gm.SetCellVisible(coord.x, coord.y, coord.z, true);
+                var cell = gm.cells[coord.x, coord.y, coord.z];
+                if (cell != null)
+                {
+                    var rend = cell.GetComponent<MeshRenderer>();
+                    rend.enabled = true;
+                    rend.material.color = Color.green;
+                }
+            }
 
-            retryButton.gameObject.SetActive(true);
+            if (retryButton != null)
+                retryButton.gameObject.SetActive(true);
         }
-
 
         /// <summary>
         /// Computes the minimal yaw (around world‐up) to turn the line’s centroid toward the camera (world +Z).
