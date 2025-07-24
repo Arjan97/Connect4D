@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using TMPro;
+using Unity.VisualScripting.Antlr3.Runtime;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -19,6 +20,7 @@ namespace QuantumConnect
         public GameObject playerOneTokenPrefab;
         public GameObject playerTwoTokenPrefab;
         public GameObject aiTokenPrefab;
+        public Material aiTwoMaterial;
 
         [Header("Highlight Settings")]
         [Tooltip("Seconds to wait between blink states")]
@@ -37,8 +39,10 @@ namespace QuantumConnect
         public Image turnImage;
         public Sprite playerOneIcon;
         public Sprite playerTwoIcon;
-        public Sprite aiIcon;
         public Button retryButton;
+        public Sprite aiOneIcon;     
+        public Sprite aiTwoIcon;     
+        public Color aiTwoColor = Color.blue; 
 
         public int GetDropY(int x, int z) => FindDropY(x, z);
         public TokenType[,,] Board => _board;
@@ -95,33 +99,73 @@ namespace QuantumConnect
         /// </summary>
         void UpdateTurnUI()
         {
-            bool vsAI = (mode == GameMode.PvAI);
             if (turnText != null)
             {
-                if (_currentPlayer == 0)
+                switch (mode)
                 {
-                    turnText.text = "Player One's Turn";
-                    turnText.color = _playerOneColor;
-                }
-                else if (vsAI)
-                {
-                    turnText.text = "AI's Turn";
-                    turnText.color = _aiColor;
-                }
-                else
-                {
-                    turnText.text = "Player Two's Turn";
-                    turnText.color = _playerTwoColor;
+                    case GameMode.PvP:
+                        if (_currentPlayer == 0)
+                        {
+                            turnText.text = "Player One's Turn";
+                            turnText.color = _playerOneColor;
+                        }
+                        else
+                        {
+                            turnText.text = "Player Two's Turn";
+                            turnText.color = _playerTwoColor;
+                        }
+                        break;
+
+                    case GameMode.PvAI:
+                        if (_currentPlayer == 0)
+                        {
+                            turnText.text = "Player One's Turn";
+                            turnText.color = _playerOneColor;
+                        }
+                        else
+                        {
+                            turnText.text = "AI's Turn";
+                            turnText.color = _aiColor;
+                        }
+                        break;
+
+                    case GameMode.AIvAI:
+                        if (_currentPlayer == 0)
+                        {
+                            turnText.text = "AI One's Turn";
+                            turnText.color = _aiColor;
+                        }
+                        else
+                        {
+                            turnText.text = "AI Two's Turn";
+                            turnText.color = aiTwoColor;
+                        }
+                        break;
                 }
             }
+
             if (turnImage != null)
             {
-                if (_currentPlayer == 0)
-                    turnImage.sprite = playerOneIcon;
-                else if (vsAI)
-                    turnImage.sprite = aiIcon;
-                else
-                    turnImage.sprite = playerTwoIcon;
+                switch (mode)
+                {
+                    case GameMode.PvP:
+                        turnImage.sprite = (_currentPlayer == 0)
+                                         ? playerOneIcon
+                                         : playerTwoIcon;
+                        break;
+
+                    case GameMode.PvAI:
+                        turnImage.sprite = (_currentPlayer == 0)
+                                         ? playerOneIcon
+                                         : aiOneIcon;
+                        break;
+
+                    case GameMode.AIvAI:
+                        turnImage.sprite = (_currentPlayer == 0)
+                                         ? aiOneIcon
+                                         : aiTwoIcon;
+                        break;
+                }
             }
         }
 
@@ -130,12 +174,21 @@ namespace QuantumConnect
         /// </summary>
         void UpdateScoreUI()
         {
-            if (scoreText != null)
+            if (scoreText == null) return;
+
+            switch (mode)
             {
-                if (scoreText == null) return;
-                bool vsAI = mode == GameMode.PvAI;
-                string second = vsAI ? "AI" : "P2";
-                scoreText.text = $"P1: {_playerOneScore}   {second}: {_playerTwoScore}";
+                case GameMode.PvP:
+                    scoreText.text = $"P1: {_playerOneScore}   P2: {_playerTwoScore}";
+                    break;
+
+                case GameMode.PvAI:
+                    scoreText.text = $"P1: {_playerOneScore}   AI: {_playerTwoScore}";
+                    break;
+
+                case GameMode.AIvAI:
+                    scoreText.text = $"AI1: {_playerOneScore}   AI2: {_playerTwoScore}";
+                    break;
             }
         }
 
@@ -347,11 +400,21 @@ namespace QuantumConnect
             int dropY = GetDropY(x, z);
 
             Vector3 topWorld = gm.GetCellWorldPosition(x, gm.sizeY - 1, z);
-            GameObject prefab = _currentPlayer == 0
-                ? playerOneTokenPrefab
-                : (mode == GameMode.AIvAI
-                    ? playerTwoTokenPrefab
-                    : aiTokenPrefab);
+            GameObject prefab;
+            if (mode == GameMode.AIvAI)
+            {
+                prefab = aiTokenPrefab;
+            }
+            else if (_currentPlayer == 0)
+            {
+                prefab = playerOneTokenPrefab;
+            }
+            else
+            {
+                prefab = (mode == GameMode.PvAI)
+                         ? aiTokenPrefab
+                         : playerTwoTokenPrefab;
+            }
 
             GameObject token = Instantiate(
                 prefab,
@@ -359,6 +422,13 @@ namespace QuantumConnect
                 prefab.transform.rotation,
                 gm.TimelineContainer
             );
+
+            if (mode == GameMode.AIvAI && _currentPlayer == 1)
+            {
+                var rend = token.GetComponent<MeshRenderer>();
+                if (rend != null)
+                    rend.material = aiTwoMaterial;
+            }
 
             AudioManager.Instance.PlayTokenLand();
             StartCoroutine(BlockFlashRoutine(x, dropY, z));

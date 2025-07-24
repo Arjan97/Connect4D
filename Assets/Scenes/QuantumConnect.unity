@@ -154,7 +154,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 54.75, y: -39.98}
-  m_SizeDelta: {x: 304.27, y: 145}
+  m_SizeDelta: {x: 309.18, y: 145}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &70545030
 MonoBehaviour:
@@ -680,6 +680,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 4739175909452348586, guid: bc35a783b076f33439cd82079c5d6c63, type: 3}
+      propertyPath: selectedMode
+      value: 2
+      objectReference: {fileID: 0}
     - target: {fileID: 5176464582924963796, guid: bc35a783b076f33439cd82079c5d6c63, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -1598,6 +1602,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1158872063560924305, guid: 61dcd79ba94f77b4198209a55f70f381, type: 3}
+      propertyPath: mode
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1158872063560924305, guid: 61dcd79ba94f77b4198209a55f70f381, type: 3}
       propertyPath: warpSFX
       value: 
       objectReference: {fileID: 8300000, guid: 9d5a5739610047c4a87105904e9af2dd, type: 3}
@@ -1610,6 +1618,14 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 366851740}
     - target: {fileID: 1158872063560924305, guid: 61dcd79ba94f77b4198209a55f70f381, type: 3}
+      propertyPath: aiOneIcon
+      value: 
+      objectReference: {fileID: 21300000, guid: 43972f8739b88db48a37f69ae1b27703, type: 3}
+    - target: {fileID: 1158872063560924305, guid: 61dcd79ba94f77b4198209a55f70f381, type: 3}
+      propertyPath: aiTwoIcon
+      value: 
+      objectReference: {fileID: 21300000, guid: 43972f8739b88db48a37f69ae1b27703, type: 3}
+    - target: {fileID: 1158872063560924305, guid: 61dcd79ba94f77b4198209a55f70f381, type: 3}
       propertyPath: scoreText
       value: 
       objectReference: {fileID: 70545030}
@@ -1621,6 +1637,10 @@ PrefabInstance:
       propertyPath: retryButton
       value: 
       objectReference: {fileID: 527282182}
+    - target: {fileID: 1158872063560924305, guid: 61dcd79ba94f77b4198209a55f70f381, type: 3}
+      propertyPath: aiTwoMaterial
+      value: 
+      objectReference: {fileID: 2100000, guid: 7b120b36578b1694a960600fd4443e0f, type: 2}
     - target: {fileID: 1158872063560924305, guid: 61dcd79ba94f77b4198209a55f70f381, type: 3}
       propertyPath: blinkInterval
       value: 0.3

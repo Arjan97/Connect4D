@@ -11,7 +11,7 @@ namespace QuantumConnect
     public class InputManager : MonoBehaviour
     {
         public static InputManager Instance { get; private set; }
-        public GameMode selectedMode = GameMode.PvAI;
+        public GameMode selectedMode;
 
         void Awake()
         {
