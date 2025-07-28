@@ -1,7 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using TMPro;
-using Unity.VisualScripting.Antlr3.Runtime;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -62,7 +61,7 @@ namespace QuantumConnect
         int _playerTwoScore;
         readonly Color _playerOneColor = Color.red;
         readonly Color _playerTwoColor = Color.yellow;
-        readonly Color _aiColor = Color.purple;
+        readonly Color _aiColor = Color.magenta;
         void Awake()
         {
             if (Instance != null && Instance != this) Destroy(gameObject);

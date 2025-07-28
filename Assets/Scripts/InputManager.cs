@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
+using UnityEngine.InputSystem.EnhancedTouch;
 
 namespace QuantumConnect
 {
@@ -18,6 +19,7 @@ namespace QuantumConnect
             if (Instance != null && Instance != this) Destroy(gameObject);
             else Instance = this;
             DontDestroyOnLoad(this.gameObject);
+            EnhancedTouchSupport.Enable();
         }
 
         void Update()
@@ -42,8 +44,27 @@ namespace QuantumConnect
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
                 return;
 
-            if (Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame)
+            Vector2 screenPos;
+            bool pressedThisFrame = false;
+
+            // Mouse
+            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+            {
+                pressedThisFrame = true;
+                screenPos = Mouse.current.position.ReadValue();
+            }
+            // Touch 
+            else if (Touchscreen.current != null &&
+                Touchscreen.current.primaryTouch.press.wasPressedThisFrame)
+            {
+                pressedThisFrame = true;
+                screenPos = Touchscreen.current.primaryTouch.position.ReadValue();
+            }
+            else
+            {
                 return;
+            }
+
             Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
             if (!Physics.Raycast(ray, out var hit))
                 return;
