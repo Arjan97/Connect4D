@@ -1,1 +1,9 @@
-public enum TokenType { None, PlayerOne, PlayerTwo }
+namespace QuantumConnect
+{
+    public enum TokenType 
+    { 
+        None, 
+        PlayerOne, 
+        PlayerTwo 
+    }
+}
