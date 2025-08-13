@@ -1,3 +1,4 @@
+using Mono.Cecil;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -6,10 +7,11 @@ using UnityEngine;
 namespace QuantumConnect
 {
     /// <summary>
-    /// Handles token falling, black-hole warp, exact per-layer pass blink, and board write.
+    /// Handles token falling (with per-layer blink), optional black-hole warp, and board write.
     /// </summary>
     public class TokenDropper : ITokenDropper
     {
+        #region Ctor deps
         readonly GameTuning _tuning;
         readonly CubeManager _cubeM;
         readonly BlackHoleManager _bhM;
@@ -22,7 +24,9 @@ namespace QuantumConnect
             _audio = audio;
             _tuning = tuning;
         }
+        #endregion
 
+        #region Public API
         public IEnumerator Drop(
             BoardModel board,
             int currentPlayer,
@@ -32,9 +36,10 @@ namespace QuantumConnect
             Material aiTwoMaterial,
             Action<TokenTypes, int, int, int> onPlaced)
         {
-            int x = startXZ.x, z = startXZ.z;
+            int x = startXZ.x;
+            int z = startXZ.z;
 
-            if (x < 0 || x >= board.sizeX || z < 0 || z >= board.sizeZ)
+            if (!InBounds(board, x, z))
             {
                 Debug.LogWarning($"TokenDropper.Drop: invalid start indices x:{x} z:{z} (board {board.sizeX}x{board.sizeZ}). Aborting drop.");
                 yield break;
@@ -45,11 +50,12 @@ namespace QuantumConnect
 
             var placed = currentPlayer == 0 ? TokenTypes.PlayerOne : TokenTypes.PlayerTwo;
 
+            // Spawn token above the column
             Vector3 topWorld = _cubeM.GetCellWorldPosition(x, _cubeM.sizeY - 1, z);
             var prefab = factory.PickPrefab(mode, currentPlayer);
             var token = UnityEngine.Object.Instantiate(
                 prefab,
-                topWorld + Vector3.up * _tuning.dropHeight,
+                topWorld + Vector3.up * (_tuning != null ? _tuning.dropHeight : 1.8f),
                 prefab.transform.rotation,
                 _cubeM.CubeContainer
             );
@@ -57,28 +63,33 @@ namespace QuantumConnect
 
             _audio?.PlayTokenLand();
 
-            List<(int y, float worldY)> passList = BuildPassList(x, z, y);
+            var passList = BuildPassList(x, z, y);
             int nextPassIndex = 0;
 
             Vector3Int? holeSrc = FindHighestBlackHoleOnColumn(x, z);
             bool warped = false;
 
+            float dropSpeed = _tuning != null ? _tuning.dropSpeed : 8f;
+
+            // Fall loop
             while (true)
             {
                 if (token == null) yield break;
 
-                token.transform.position += Vector3.down * _tuning.dropSpeed * Time.deltaTime;
+                token.transform.position += Vector3.down * dropSpeed * Time.deltaTime;
 
+                // Blink per layer as token passes it
                 while (nextPassIndex < passList.Count &&
                        token.transform.position.y <= passList[nextPassIndex].worldY)
                 {
                     int passY = passList[nextPassIndex].y;
                     if (_cubeM.Cells[x, passY, z] != null)
-                        yield return BlinkOnce(x, passY, z);
+                        yield return BlinkOnce(x, passY, z, dropSpeed);
                     nextPassIndex++;
                 }
 
-                if (!warped && holeSrc.HasValue && _bhM.BlackHoles.TryGetValue(holeSrc.Value, out var data))
+                // Warp if crossing a black hole’s y
+                if (!warped && holeSrc.HasValue && _bhM != null && _bhM.BlackHoles.TryGetValue(holeSrc.Value, out var data))
                 {
                     float holeY = data.Instance.transform.position.y;
                     if (token.transform.position.y <= holeY)
@@ -89,6 +100,7 @@ namespace QuantumConnect
                         yield return ScaleWarpRoutine(token.transform, token.transform.position);
 
                         _bhM.RemoveBlackHole(holeSrc.Value);
+
                         x = (holeSrc.Value.x == 0 || holeSrc.Value.x == _cubeM.sizeX - 1)
                             ? _cubeM.sizeX - 1 - holeSrc.Value.x : x;
                         z = (holeSrc.Value.z == 0 || holeSrc.Value.z == _cubeM.sizeZ - 1)
@@ -98,7 +110,7 @@ namespace QuantumConnect
                         if (y < 0) yield break;
 
                         Vector3 topOpp = _cubeM.GetCellWorldPosition(x, _cubeM.sizeY - 1, z);
-                        token.transform.position = topOpp + Vector3.up * _tuning.dropHeight;
+                        token.transform.position = topOpp + Vector3.up * (_tuning != null ? _tuning.dropHeight : 1.8f);
                         _audio?.PlayTokenLand();
 
                         passList = BuildPassList(x, z, y);
@@ -119,6 +131,7 @@ namespace QuantumConnect
             }
 
             board.cells[x, y, z] = placed;
+
             var oldCell = _cubeM.Cells[x, y, z];
             if (oldCell != null)
             {
@@ -129,6 +142,11 @@ namespace QuantumConnect
 
             onPlaced?.Invoke(placed, x, y, z);
         }
+        #endregion
+
+        #region Private helpers
+        static bool InBounds(BoardModel b, int x, int z)
+            => x >= 0 && x < b.sizeX && z >= 0 && z < b.sizeZ;
 
         int FindDropY(BoardModel b, int x, int z)
         {
@@ -150,6 +168,8 @@ namespace QuantumConnect
 
         Vector3Int? FindHighestBlackHoleOnColumn(int x, int z)
         {
+            if (_bhM == null) return null;
+
             Vector3Int? best = null;
             foreach (var kv in _bhM.BlackHoles)
             {
@@ -159,9 +179,10 @@ namespace QuantumConnect
             }
             return best;
         }
-        IEnumerator BlinkOnce(int x, int y, int z)
+
+        IEnumerator BlinkOnce(int x, int y, int z, float dropSpeed)
         {
-            float layerTime = _cubeM.CellSpacing.y / _tuning.dropSpeed;
+            float layerTime = _cubeM.CellSpacing.y / dropSpeed;
             float hold = Mathf.Clamp(layerTime * 0.25f, 0.02f, 0.08f);
 
             _cubeM.SetCellVisible(x, y, z, false);
@@ -177,22 +198,28 @@ namespace QuantumConnect
             Vector3 startScale = token.localScale;
             float half = duration * 0.5f, t = 0f;
 
+            // Shrink
             while (t < half)
             {
                 token.localScale = Vector3.Lerp(startScale, Vector3.zero, t / half);
-                t += Time.deltaTime; yield return null;
+                t += Time.deltaTime;
+                yield return null;
             }
             token.localScale = Vector3.zero;
 
+            // Teleport to target y
             token.position = targetWorldPos;
 
+            // Expand
             t = 0f;
             while (t < half)
             {
                 token.localScale = Vector3.Lerp(Vector3.zero, startScale, t / half);
-                t += Time.deltaTime; yield return null;
+                t += Time.deltaTime;
+                yield return null;
             }
             token.localScale = startScale;
         }
+        #endregion
     }
 }
