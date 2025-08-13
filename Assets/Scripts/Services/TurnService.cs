@@ -6,10 +6,10 @@ namespace QuantumConnect
         public void Reset() => Current = 0;     
         public void Next() => Current = 1 - Current;
 
-        public bool IsAiTurn(GameMode mode) =>
-            (mode == GameMode.PvAI && Current == 1) || mode == GameMode.AIvAI;
+        public bool IsAiTurn(GameModes mode) =>
+            (mode == GameModes.PvAI && Current == 1) || mode == GameModes.AIvAI;
 
-        public bool IsHumanTurn(GameMode mode) =>
-            (mode == GameMode.PvP) || (mode == GameMode.PvAI && Current == 0);
+        public bool IsHumanTurn(GameModes mode) =>
+            (mode == GameModes.PvP) || (mode == GameModes.PvAI && Current == 0);
     }
 }

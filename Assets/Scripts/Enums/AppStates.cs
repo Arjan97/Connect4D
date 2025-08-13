@@ -1,6 +1,6 @@
 namespace QuantumConnect
 {
-    public enum AppState
+    public enum AppStates
     {
         Menu,
         Game

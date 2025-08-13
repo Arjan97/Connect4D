@@ -1,6 +1,6 @@
 namespace QuantumConnect
 {
-    public enum GameMode
+    public enum GameModes
     {
         PvP,    
         PvAI,   

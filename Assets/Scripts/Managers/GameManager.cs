@@ -149,7 +149,7 @@ namespace QuantumConnect
             IsResolving = false;
         }
 
-        void OnTokenPlaced(TokenType placed, int x, int y, int z)
+        void OnTokenPlaced(TokenTypes placed, int x, int y, int z)
         {
             if (_rules.CheckAnyWin(_board, placed, out var winLine))
             {
@@ -179,6 +179,6 @@ namespace QuantumConnect
         public bool IsOver => _gameOver;
         public int CurrentPlayer => _turns.Current; public BoardModel Board => _board;
         public TurnService Turns => _turns;
-        public GameMode Mode => _sessionM != null ? _sessionM.SelectedMode : GameMode.PvAI;
+        public GameModes Mode => _sessionM != null ? _sessionM.SelectedMode : GameModes.PvAI;
     }
 }

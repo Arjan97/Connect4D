@@ -20,11 +20,11 @@ namespace QuantumConnect
         public int FindDropY(BoardModel b, int x, int z)
         {
             for (int y = 0; y < b.sizeY; y++)
-                if (b.cells[x, y, z] == TokenType.None) return y;
+                if (b.cells[x, y, z] == TokenTypes.None) return y;
             return -1;
         }
 
-        public int ApplyMove(BoardModel b, int x, int z, TokenType t)
+        public int ApplyMove(BoardModel b, int x, int z, TokenTypes t)
         {
             int y = FindDropY(b, x, z);
             if (y >= 0) b.cells[x, y, z] = t;
@@ -34,20 +34,20 @@ namespace QuantumConnect
         public void UndoMove(BoardModel b, int x, int z)
         {
             for (int y = b.sizeY - 1; y >= 0; y--)
-                if (b.cells[x, y, z] != TokenType.None) { b.cells[x, y, z] = TokenType.None; return; }
+                if (b.cells[x, y, z] != TokenTypes.None) { b.cells[x, y, z] = TokenTypes.None; return; }
         }
 
-        public bool IsWinningMove(BoardModel b, int x, int z, TokenType t)
+        public bool IsWinningMove(BoardModel b, int x, int z, TokenTypes t)
         {
             int y = FindDropY(b, x, z);
             if (y < 0) return false;
             b.cells[x, y, z] = t;
             bool win = CheckWin(b, x, y, z, t, out _);
-            b.cells[x, y, z] = TokenType.None;
+            b.cells[x, y, z] = TokenTypes.None;
             return win;
         }
 
-        public bool CheckAnyWin(BoardModel b, TokenType t, out List<Vector3Int> line)
+        public bool CheckAnyWin(BoardModel b, TokenTypes t, out List<Vector3Int> line)
         {
             for (int x = 0; x < b.sizeX; x++)
                 for (int y = 0; y < b.sizeY; y++)
@@ -62,11 +62,11 @@ namespace QuantumConnect
             for (int x = 0; x < b.sizeX; x++)
                 for (int y = 0; y < b.sizeY; y++)
                     for (int z = 0; z < b.sizeZ; z++)
-                        if (b.cells[x, y, z] == TokenType.None) return true;
+                        if (b.cells[x, y, z] == TokenTypes.None) return true;
             return false;
         }
 
-        public List<Vector2Int> GetForkMoves(BoardModel b, List<Vector2Int> valid, TokenType t)
+        public List<Vector2Int> GetForkMoves(BoardModel b, List<Vector2Int> valid, TokenTypes t)
         {
             var forks = new List<Vector2Int>();
             for (int i = 0; i < valid.Count; i++)
@@ -84,14 +84,14 @@ namespace QuantumConnect
                     if (n.x == m.x && n.y == m.y) continue;
                     if (IsWinningMove(b, n.x, n.y, t)) { count++; if (count >= 2) break; }
                 }
-                b.cells[m.x, y, m.y] = TokenType.None;
+                b.cells[m.x, y, m.y] = TokenTypes.None;
 
                 if (count >= 2) forks.Add(m);
             }
             return forks;
         }
 
-        bool CheckWin(BoardModel b, int x, int y, int z, TokenType t, out List<Vector3Int> line)
+        bool CheckWin(BoardModel b, int x, int y, int z, TokenTypes t, out List<Vector3Int> line)
         {
             for (int i = 0; i < _dirs.Length; i++)
             {
@@ -109,7 +109,7 @@ namespace QuantumConnect
             line = null; return false;
         }
 
-        int CountDirection(BoardModel b, int x, int y, int z, Vector3Int dir, TokenType t)
+        int CountDirection(BoardModel b, int x, int y, int z, Vector3Int dir, TokenTypes t)
         {
             int count = 0;
             int nx = x + dir.x, ny = y + dir.y, nz = z + dir.z;

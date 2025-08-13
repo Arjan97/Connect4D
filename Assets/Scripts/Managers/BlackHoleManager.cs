@@ -68,7 +68,7 @@ namespace QuantumConnect
             for (int x = 0; x < _cubeM.sizeX; x++)
                 for (int y = 0; y < _cubeM.sizeY; y++)
                     for (int z = 0; z < _cubeM.sizeZ; z++)
-                        if (_cubeM.Cells[x, y, z] != null && board.cells[x, y, z] == TokenType.None)
+                        if (_cubeM.Cells[x, y, z] != null && board.cells[x, y, z] == TokenTypes.None)
                             avail.Add(new Vector3Int(x, y, z));
 
             int maxInit = _tuning ? _tuning.maxInitialBlackHoles : 6;
@@ -109,7 +109,7 @@ namespace QuantumConnect
             for (int x = 0; x < _cubeM.sizeX; x++)
                 for (int y = 0; y < _cubeM.sizeY; y++)
                     for (int z = 0; z < _cubeM.sizeZ; z++)
-                        if (_cubeM.Cells[x, y, z] != null && _gameM.Board[x, y, z] == TokenType.None)
+                        if (_cubeM.Cells[x, y, z] != null && _gameM.Board[x, y, z] == TokenTypes.None)
                             empty++;
 
             int minEmpty = _tuning ? _tuning.minEmptyCellsForSpawn : 10;
@@ -125,7 +125,7 @@ namespace QuantumConnect
                     {
                         var c = new Vector3Int(x, y, z);
                         if (_cubeM.Cells[x, y, z] == null) continue;
-                        if (_gameM.Board[x, y, z] != TokenType.None) continue;
+                        if (_gameM.Board[x, y, z] != TokenTypes.None) continue;
                         if (_map.ContainsKey(c)) continue;
                         choices.Add(c);
                     }

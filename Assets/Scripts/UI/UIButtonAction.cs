@@ -50,37 +50,37 @@ namespace QuantumConnect
 
             switch (_config.action)
             {
-                case ButtonAction.StartGame:
+                case ButtonActions.StartGame:
                     StartGame();
                     break;
 
-                case ButtonAction.GoToMenu:
+                case ButtonActions.GoToMenu:
                     GoToMenu();
                     break;
 
-                case ButtonAction.ResetMatch:
+                case ButtonActions.ResetMatch:
                     ResetMatch(_config.keepScores);
                     break;
 
-                case ButtonAction.PlayMenuMusic:
+                case ButtonActions.PlayMenuMusic:
                     _central.Music?.PlayMenuMusic();
                     break;
 
-                case ButtonAction.PlayGameMusic:
+                case ButtonActions.PlayGameMusic:
                     _central.Music?.PlayGameMusic();
                     break;
 
-                case ButtonAction.StopMusic:
+                case ButtonActions.StopMusic:
                     _central.Music?.StopMusic();
                     break;
-                case ButtonAction.RotateLeft:
+                case ButtonActions.RotateLeft:
                     _central.Cube?.RotateLeft();
                     break;
-                case ButtonAction.RotateRight:
+                case ButtonActions.RotateRight:
                     _central.Cube?.RotateRight();
                     break;
 
-                case ButtonAction.QuitApp:
+                case ButtonActions.QuitApp:
 #if UNITY_EDITOR
                     UnityEditor.EditorApplication.isPlaying = false;
 #else

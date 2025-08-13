@@ -9,11 +9,11 @@ namespace QuantumConnect
         IEnumerator Drop(
             BoardModel board,
             int currentPlayer,
-            GameMode mode,
+            GameModes mode,
             Vector3Int startXZ,
             ITokenFactory factory,
             Material aiTwoMaterial,
-            Action<TokenType, int, int, int> onPlaced
+            Action<TokenTypes, int, int, int> onPlaced
         );
     }
 }

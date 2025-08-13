@@ -12,9 +12,9 @@ namespace QuantumConnect
     {
         #region Backing (will be overridden by GameTuning if present)
         [Header("Grid Size (fallback when no GameTuning)")]
-        [SerializeField] public int sizeX = 4;
-        [SerializeField] public int sizeY = 4;
-        [SerializeField] public int sizeZ = 4;
+        public int sizeX = 4;
+        public int sizeY = 4;
+        public int sizeZ = 4;
 
         [Header("Layout (fallback)")]
         [SerializeField] Vector3 _startPosition = Vector3.zero;
@@ -150,7 +150,7 @@ namespace QuantumConnect
                     if (!IsOnFace(coord, face)) continue;
 
                     if (Cells[x, y, z] == null) continue;
-                    if (board.cells[x, y, z] != TokenType.None) continue;
+                    if (board.cells[x, y, z] != TokenTypes.None) continue;
 
                     result.Add(new Vector2Int(x, z));
                 }

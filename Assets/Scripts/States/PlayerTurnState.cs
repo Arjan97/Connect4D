@@ -16,7 +16,7 @@ namespace QuantumConnect
 
         public void OnCellClick(GameManager g, int x, int z)
         {
-            if (g.IsOver || g.IsResolving || !g.Turns.IsHumanTurn(g.Mode) || g.Mode == GameMode.AIvAI) return;
+            if (g.IsOver || g.IsResolving || !g.Turns.IsHumanTurn(g.Mode) || g.Mode == GameModes.AIvAI) return;
 
             g.StartCoroutine(g.DropToken(x, z));
             g.SetState(new ResolvingState());

@@ -26,11 +26,11 @@ namespace QuantumConnect
         public IEnumerator Drop(
             BoardModel board,
             int currentPlayer,
-            GameMode mode,
+            GameModes mode,
             Vector3Int startXZ,
             ITokenFactory factory,
             Material aiTwoMaterial,
-            Action<TokenType, int, int, int> onPlaced)
+            Action<TokenTypes, int, int, int> onPlaced)
         {
             int x = startXZ.x, z = startXZ.z;
 
@@ -43,7 +43,7 @@ namespace QuantumConnect
             int y = FindDropY(board, x, z);
             if (y < 0) yield break;
 
-            var placed = currentPlayer == 0 ? TokenType.PlayerOne : TokenType.PlayerTwo;
+            var placed = currentPlayer == 0 ? TokenTypes.PlayerOne : TokenTypes.PlayerTwo;
 
             Vector3 topWorld = _cubeM.GetCellWorldPosition(x, _cubeM.sizeY - 1, z);
             var prefab = factory.PickPrefab(mode, currentPlayer);
@@ -133,7 +133,7 @@ namespace QuantumConnect
         int FindDropY(BoardModel b, int x, int z)
         {
             for (int yy = 0; yy < b.sizeY; yy++)
-                if (b.cells[x, yy, z] == TokenType.None) return yy;
+                if (b.cells[x, yy, z] == TokenTypes.None) return yy;
             return -1;
         }
 

@@ -8,10 +8,10 @@ namespace QuantumConnect
     public class ButtonActionConfig : ScriptableObject
     {
         [Header("Action")]
-        public ButtonAction action = ButtonAction.StartGame;
+        public ButtonActions action = ButtonActions.StartGame;
 
         [Header("Game Mode (for StartGame)")]
-        public GameMode mode = GameMode.PvAI;
+        public GameModes mode = GameModes.PvAI;
 
         [Header("Scene Names")]
         public string gameSceneName = "QuantumConnect";

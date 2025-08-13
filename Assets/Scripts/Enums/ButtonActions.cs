@@ -1,6 +1,6 @@
 namespace QuantumConnect
 {
-    public enum ButtonAction
+    public enum ButtonActions
     {
         StartGame,
         GoToMenu,

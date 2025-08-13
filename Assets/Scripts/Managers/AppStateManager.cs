@@ -13,18 +13,18 @@ namespace QuantumConnect
         [SerializeField] string _gameSceneName = "QuantumConnect";
 
         [Header("Boot")]
-        [SerializeField] AppState _initialState = AppState.Menu;
+        [SerializeField] AppStates _initialState = AppStates.Menu;
 
-        AppState _current;
+        AppStates _current;
 
-        public AppState Current => _current;
+        public AppStates Current => _current;
 
         void Start()
         {
             SetState(_initialState);
         }
 
-        public void SetState(AppState next)
+        public void SetState(AppStates next)
         {
             if (_current == next) return;
             _current = next;
@@ -34,13 +34,13 @@ namespace QuantumConnect
 
             switch (_current)
             {
-                case AppState.Menu:
+                case AppStates.Menu:
                     if (SceneManager.GetActiveScene().name != _menuSceneName)
                         SceneManager.LoadScene(_menuSceneName);
                     music?.PlayMenuMusic();
                     break;
 
-                case AppState.Game:
+                case AppStates.Game:
                     if (SceneManager.GetActiveScene().name != _gameSceneName)
                         SceneManager.LoadScene(_gameSceneName);
                     music?.PlayGameMusic();
@@ -48,8 +48,8 @@ namespace QuantumConnect
             }
         }
 
-        public void GoToMenu() => SetState(AppState.Menu);
-        public void StartGame() => SetState(AppState.Game);
+        public void GoToMenu() => SetState(AppStates.Menu);
+        public void StartGame() => SetState(AppStates.Game);
 
         void OnEnable() { SceneManager.sceneLoaded += OnSceneLoaded; }
         void OnDisable() { SceneManager.sceneLoaded -= OnSceneLoaded; }

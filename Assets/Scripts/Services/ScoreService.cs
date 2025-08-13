@@ -11,9 +11,9 @@ namespace QuantumConnect
             if (!keep) { P1 = 0; P2 = 0; }
         }
 
-        public void Add(TokenType winner)
+        public void Add(TokenTypes winner)
         {
-            if (winner == TokenType.PlayerOne) P1++; else P2++;
+            if (winner == TokenTypes.PlayerOne) P1++; else P2++;
         }
     }
 }

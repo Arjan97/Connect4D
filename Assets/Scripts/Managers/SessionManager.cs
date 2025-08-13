@@ -4,9 +4,9 @@ namespace QuantumConnect
 {
     public class SessionManager : MonoBehaviour
     {
-        [SerializeField] GameMode _selectedMode = GameMode.PvAI;
+        [SerializeField] GameModes _selectedMode = GameModes.PvAI;
 
-        public GameMode SelectedMode
+        public GameModes SelectedMode
         {
             get => _selectedMode;
             set => _selectedMode = value;

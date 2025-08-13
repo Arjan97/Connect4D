@@ -12,16 +12,16 @@ namespace QuantumConnect
             _p1Prefab = p1; _p2Prefab = p2; _aiPrefab = ai;
         }
 
-        public GameObject PickPrefab(GameMode mode, int currentPlayer)
+        public GameObject PickPrefab(GameModes mode, int currentPlayer)
         {
-            if (mode == GameMode.AIvAI) return _aiPrefab;
+            if (mode == GameModes.AIvAI) return _aiPrefab;
             if (currentPlayer == 0) return _p1Prefab;
-            return mode == GameMode.PvAI ? _aiPrefab : _p2Prefab;
+            return mode == GameModes.PvAI ? _aiPrefab : _p2Prefab;
         }
 
-        public void PostSpawnVisual(GameMode mode, int currentPlayer, GameObject token, Material aiTwoMaterial)
+        public void PostSpawnVisual(GameModes mode, int currentPlayer, GameObject token, Material aiTwoMaterial)
         {
-            if (mode == GameMode.AIvAI && currentPlayer == 1 && aiTwoMaterial != null)
+            if (mode == GameModes.AIvAI && currentPlayer == 1 && aiTwoMaterial != null)
             {
                 var r = token.GetComponent<MeshRenderer>();
                 if (r != null) r.material = aiTwoMaterial;

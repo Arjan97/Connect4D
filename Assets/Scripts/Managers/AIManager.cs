@@ -63,14 +63,14 @@ namespace QuantumConnect
             var board = _gameM.Board;
 
             // Win
-            if (TryFindImmediateMove(TokenType.PlayerTwo, out var winMove, out var winFace))
+            if (TryFindImmediateMove(TokenTypes.PlayerTwo, out var winMove, out var winFace))
             {
                 yield return ExecuteMove(winFace, winMove.x, winMove.y);
                 yield break;
             }
 
             // Block opponent
-            if (TryFindImmediateMove(TokenType.PlayerOne, out var blockMove, out var blockFace))
+            if (TryFindImmediateMove(TokenTypes.PlayerOne, out var blockMove, out var blockFace))
             {
                 yield return ExecuteMove(blockFace, blockMove.x, blockMove.y);
                 yield break;
@@ -79,7 +79,7 @@ namespace QuantumConnect
             // Forks
             var currentFace = _cubeM.GetActiveFaceNormal();
             var currentMoves = _cubeM.CollectMovesOnFace(board, currentFace);
-            var forks = _gameM.Board.GetForkMoves(currentMoves, TokenType.PlayerTwo);
+            var forks = _gameM.Board.GetForkMoves(currentMoves, TokenTypes.PlayerTwo);
             if (forks.Count > 0)
             {
                 var choice = forks[Random.Range(0, forks.Count)];
@@ -123,7 +123,7 @@ namespace QuantumConnect
                 if (cx < 0 || cx >= _cubeM.sizeX || cz < 0 || cz >= _cubeM.sizeZ)
                     continue;
 
-                _gameM.Board.ApplyMove(cx, cz, TokenType.PlayerTwo);
+                _gameM.Board.ApplyMove(cx, cz, TokenTypes.PlayerTwo);
                 int score = Minimax(_maxDepth - 1, false);
                 _gameM.Board.UndoMove(cx, cz);
 
@@ -169,10 +169,10 @@ namespace QuantumConnect
 
         int Minimax(int depth, bool isMaximizing)
         {
-            if (_gameM.Board.CheckAnyWin(TokenType.PlayerTwo))
+            if (_gameM.Board.CheckAnyWin(TokenTypes.PlayerTwo))
                 return 1000 - (_maxDepth - depth);
 
-            if (_gameM.Board.CheckAnyWin(TokenType.PlayerOne))
+            if (_gameM.Board.CheckAnyWin(TokenTypes.PlayerOne))
                 return -1000 + (_maxDepth - depth);
 
             if (depth == 0)
@@ -190,7 +190,7 @@ namespace QuantumConnect
                 for (int i = 0; i < moves.Count; i++)
                 {
                     var m = moves[i];
-                    _gameM.Board.ApplyMove(m.x, m.y, TokenType.PlayerTwo);
+                    _gameM.Board.ApplyMove(m.x, m.y, TokenTypes.PlayerTwo);
                     int val = Minimax(depth - 1, false);
                     _gameM.Board.UndoMove(m.x, m.y);
                     if (val > best) best = val;
@@ -203,7 +203,7 @@ namespace QuantumConnect
                 for (int i = 0; i < moves.Count; i++)
                 {
                     var m = moves[i];
-                    _gameM.Board.ApplyMove(m.x, m.y, TokenType.PlayerOne);
+                    _gameM.Board.ApplyMove(m.x, m.y, TokenTypes.PlayerOne);
                     int val = Minimax(depth - 1, true);
                     _gameM.Board.UndoMove(m.x, m.y);
                     if (val < best) best = val;
@@ -212,7 +212,7 @@ namespace QuantumConnect
             }
         }
 
-        bool TryFindImmediateMove(TokenType token, out Vector2Int move, out Vector3Int face)
+        bool TryFindImmediateMove(TokenTypes token, out Vector2Int move, out Vector3Int face)
         {
             var board = _gameM.Board;
 

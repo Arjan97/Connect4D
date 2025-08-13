@@ -12,7 +12,7 @@ namespace QuantumConnect
         public readonly int sizeY;
         public readonly int sizeZ;
 
-        public TokenType[,,] cells;
+        public TokenTypes[,,] cells;
 
         static readonly Vector3Int[] _dirs =
         {
@@ -27,12 +27,12 @@ namespace QuantumConnect
         public BoardModel(int x, int y, int z)
         {
             sizeX = x; sizeY = y; sizeZ = z;
-            cells = new TokenType[x, y, z];
+            cells = new TokenTypes[x, y, z];
             Clear();
         }
 
         /// <summary>Indexer so callers can use board[x,y,z].</summary>
-        public TokenType this[int x, int y, int z]
+        public TokenTypes this[int x, int y, int z]
         {
             get => cells[x, y, z];
             set => cells[x, y, z] = value;
@@ -43,17 +43,17 @@ namespace QuantumConnect
             for (int x = 0; x < sizeX; x++)
                 for (int y = 0; y < sizeY; y++)
                     for (int z = 0; z < sizeZ; z++)
-                        cells[x, y, z] = TokenType.None;
+                        cells[x, y, z] = TokenTypes.None;
         }
 
         public int GetDropY(int x, int z)
         {
             for (int y = 0; y < sizeY; y++)
-                if (cells[x, y, z] == TokenType.None) return y;
+                if (cells[x, y, z] == TokenTypes.None) return y;
             return -1;
         }
 
-        public int ApplyMove(int x, int z, TokenType t)
+        public int ApplyMove(int x, int z, TokenTypes t)
         {
             int y = GetDropY(x, z);
             if (y < 0) return -1;
@@ -64,26 +64,26 @@ namespace QuantumConnect
         public void UndoMove(int x, int z)
         {
             for (int y = sizeY - 1; y >= 0; y--)
-                if (cells[x, y, z] != TokenType.None)
+                if (cells[x, y, z] != TokenTypes.None)
                 {
-                    cells[x, y, z] = TokenType.None;
+                    cells[x, y, z] = TokenTypes.None;
                     return;
                 }
         }
 
-        public bool IsWinningMove(int x, int z, TokenType t)
+        public bool IsWinningMove(int x, int z, TokenTypes t)
         {
             int y = GetDropY(x, z);
             if (y < 0) return false;
             cells[x, y, z] = t;
             bool win = CheckWin(x, y, z, t, out _);
-            cells[x, y, z] = TokenType.None;
+            cells[x, y, z] = TokenTypes.None;
             return win;
         }
 
-        public bool CheckAnyWin(TokenType t) => CheckAnyWin(t, out _);
+        public bool CheckAnyWin(TokenTypes t) => CheckAnyWin(t, out _);
 
-        public bool CheckAnyWin(TokenType t, out List<Vector3Int> winLine)
+        public bool CheckAnyWin(TokenTypes t, out List<Vector3Int> winLine)
         {
             for (int x = 0; x < sizeX; x++)
                 for (int y = 0; y < sizeY; y++)
@@ -95,7 +95,7 @@ namespace QuantumConnect
             return false;
         }
 
-        public bool CheckWin(int x, int y, int z, TokenType t, out List<Vector3Int> line, int length = 4)
+        public bool CheckWin(int x, int y, int z, TokenTypes t, out List<Vector3Int> line, int length = 4)
         {
             for (int i = 0; i < _dirs.Length; i++)
             {
@@ -114,7 +114,7 @@ namespace QuantumConnect
             return false;
         }
 
-        int CountDirection(int x, int y, int z, Vector3Int dir, TokenType t)
+        int CountDirection(int x, int y, int z, Vector3Int dir, TokenTypes t)
         {
             int count = 0;
             int nx = x + dir.x, ny = y + dir.y, nz = z + dir.z;
@@ -132,11 +132,11 @@ namespace QuantumConnect
             for (int x = 0; x < sizeX; x++)
                 for (int y = 0; y < sizeY; y++)
                     for (int z = 0; z < sizeZ; z++)
-                        if (cells[x, y, z] == TokenType.None) return true;
+                        if (cells[x, y, z] == TokenTypes.None) return true;
             return false;
         }
 
-        public List<Vector2Int> GetForkMoves(List<Vector2Int> validMoves, TokenType t)
+        public List<Vector2Int> GetForkMoves(List<Vector2Int> validMoves, TokenTypes t)
         {
             var forks = new List<Vector2Int>();
             for (int i = 0; i < validMoves.Count; i++)
@@ -159,7 +159,7 @@ namespace QuantumConnect
                     }
                 }
 
-                cells[m.x, y, m.y] = TokenType.None;
+                cells[m.x, y, m.y] = TokenTypes.None;
                 if (count >= 2) forks.Add(m);
             }
             return forks;

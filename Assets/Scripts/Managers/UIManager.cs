@@ -6,7 +6,6 @@ namespace QuantumConnect
 {
     /// <summary>
     /// Decoupled UI controller for turn/score/win/draw prompts and retry.
-    /// Game code calls methods; no game logic here.
     /// </summary>
     public class UIManager : MonoBehaviour
     {
@@ -32,21 +31,21 @@ namespace QuantumConnect
         #endregion
 
         #region Turn/Score
-        public void UpdateTurn(GameMode mode, int currentPlayer)
+        public void UpdateTurn(GameModes mode, int currentPlayer)
         {
             if (_turnText != null)
             {
                 switch (mode)
                 {
-                    case GameMode.PvP:
+                    case GameModes.PvP:
                         _turnText.text = currentPlayer == 0 ? "Player One's Turn" : "Player Two's Turn";
                         _turnText.color = currentPlayer == 0 ? _p1Color : _p2Color;
                         break;
-                    case GameMode.PvAI:
+                    case GameModes.PvAI:
                         _turnText.text = currentPlayer == 0 ? "Player One's Turn" : "AI's Turn";
                         _turnText.color = currentPlayer == 0 ? _p1Color : _aiOneColor;
                         break;
-                    case GameMode.AIvAI:
+                    case GameModes.AIvAI:
                         _turnText.text = currentPlayer == 0 ? "AI One's Turn" : "AI Two's Turn";
                         _turnText.color = currentPlayer == 0 ? _aiOneColor : _aiTwoColor;
                         break;
@@ -57,38 +56,38 @@ namespace QuantumConnect
             {
                 switch (mode)
                 {
-                    case GameMode.PvP:
+                    case GameModes.PvP:
                         _turnImage.sprite = currentPlayer == 0 ? _playerOneIcon : _playerTwoIcon;
                         break;
-                    case GameMode.PvAI:
+                    case GameModes.PvAI:
                         _turnImage.sprite = currentPlayer == 0 ? _playerOneIcon : _aiOneIcon;
                         break;
-                    case GameMode.AIvAI:
+                    case GameModes.AIvAI:
                         _turnImage.sprite = currentPlayer == 0 ? _aiOneIcon : _aiTwoIcon;
                         break;
                 }
             }
         }
 
-        public void UpdateScore(GameMode mode, int p1Score, int p2Score)
+        public void UpdateScore(GameModes mode, int p1Score, int p2Score)
         {
             if (_scoreText == null) return;
             switch (mode)
             {
-                case GameMode.PvP: _scoreText.text = $"P1: {p1Score}   P2: {p2Score}"; break;
-                case GameMode.PvAI: _scoreText.text = $"P1: {p1Score}   AI: {p2Score}"; break;
-                case GameMode.AIvAI: _scoreText.text = $"AI1: {p1Score}  AI2: {p2Score}"; break;
+                case GameModes.PvP: _scoreText.text = $"P1: {p1Score}   P2: {p2Score}"; break;
+                case GameModes.PvAI: _scoreText.text = $"P1: {p1Score}   AI: {p2Score}"; break;
+                case GameModes.AIvAI: _scoreText.text = $"AI1: {p1Score}  AI2: {p2Score}"; break;
             }
         }
         #endregion
 
         #region Win/Draw/Retry
-        public void ShowWin(TokenType winner, GameMode mode)
+        public void ShowWin(TokenTypes winner, GameModes mode)
         {
             if (_winText == null) return;
 
-            bool vsAI = mode == GameMode.PvAI;
-            if (winner == TokenType.PlayerOne)
+            bool vsAI = mode == GameModes.PvAI;
+            if (winner == TokenTypes.PlayerOne)
             {
                 _winText.text = "Player One Won!";
                 _winText.color = _p1Color;
@@ -115,9 +114,9 @@ namespace QuantumConnect
             if (_retryButton != null) _retryButton.gameObject.SetActive(false);
         }
 
-        public void ShowRetryIfNeeded(GameMode mode)
+        public void ShowRetryIfNeeded(GameModes mode)
         {
-            if (mode == GameMode.AIvAI) return;
+            if (mode == GameModes.AIvAI) return;
             if (_retryButton != null) _retryButton.gameObject.SetActive(true);
         }
         #endregion
