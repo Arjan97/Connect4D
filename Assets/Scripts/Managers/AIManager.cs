@@ -5,7 +5,6 @@ namespace QuantumConnect
 {
     /// <summary>
     /// AI coordinator: evaluates the board and instructs CubeManager to rotate and drop.
-    /// Reads search/delay from GameTuning via CentralManager when available.
     /// </summary>
     public class AIManager : MonoBehaviour
     {
@@ -50,7 +49,11 @@ namespace QuantumConnect
             if (_gameM == null) _gameM = FindFirstObjectByType<GameManager>();
             if (_cubeM == null) _cubeM = FindFirstObjectByType<CubeManager>();
 
-            if (_gameM == null || _cubeM == null) { Debug.LogWarning("AIManager: missing Game/Cube in this scene."); return; }
+            if (_gameM == null || _cubeM == null)
+            {
+                Debug.LogWarning("AIManager: missing GameManager or CubeManager in this scene.");
+                return;
+            }
             if (!_gameM.Turns.IsAiTurn(_gameM.Mode)) return;
 
             StartCoroutine(MakeMoveRoutine());
@@ -60,26 +63,27 @@ namespace QuantumConnect
         {
             yield return new WaitForSeconds(_moveDelay);
             if (_gameM == null || _cubeM == null) yield break;
+
             var board = _gameM.Board;
 
-            // Win
+            // Try to win immediately.
             if (TryFindImmediateMove(TokenTypes.PlayerTwo, out var winMove, out var winFace))
             {
                 yield return ExecuteMove(winFace, winMove.x, winMove.y);
                 yield break;
             }
 
-            // Block opponent
+            // Block opponent’s immediate win.
             if (TryFindImmediateMove(TokenTypes.PlayerOne, out var blockMove, out var blockFace))
             {
                 yield return ExecuteMove(blockFace, blockMove.x, blockMove.y);
                 yield break;
             }
 
-            // Forks
+            // Create a fork if possible (face-aware).
             var currentFace = _cubeM.GetActiveFaceNormal();
             var currentMoves = _cubeM.CollectMovesOnFace(board, currentFace);
-            var forks = _gameM.Board.GetForkMoves(currentMoves, TokenTypes.PlayerTwo);
+            var forks = board.GetForkMoves(currentMoves, TokenTypes.PlayerTwo);
             if (forks.Count > 0)
             {
                 var choice = forks[Random.Range(0, forks.Count)];
@@ -88,7 +92,6 @@ namespace QuantumConnect
                 yield break;
             }
 
-            // Rotate
             if (_rotationChance > 0f && Random.value < _rotationChance)
             {
                 var randomFace = PickDifferentFace(currentFace);
@@ -96,14 +99,10 @@ namespace QuantumConnect
                     yield return RotateOnly(randomFace);
             }
 
-            // Minimax
+            // Evaluate candidates (prefer current face -> edges -> anywhere).
             var candidates = _cubeM.CollectMovesOnFace(board, currentFace);
-
-            if (candidates.Count == 0)
-                candidates = _cubeM.GetSideValidMoves(board);
-
-            if (candidates.Count == 0)
-                candidates = _cubeM.GetAllValidMoves(board);
+            if (candidates.Count == 0) candidates = _cubeM.GetSideValidMoves(board);
+            if (candidates.Count == 0) candidates = _cubeM.GetAllValidMoves(board);
 
             if (candidates.Count == 0)
             {
@@ -111,21 +110,19 @@ namespace QuantumConnect
                 yield break;
             }
 
-            Vector2Int bestMove = new Vector2Int(-1, -1);
+            // Minimax pick.
+            Vector2Int bestMove = new(-1, -1);
             int bestScore = int.MinValue;
 
             for (int i = 0; i < candidates.Count; i++)
             {
                 var m = candidates[i];
-                int cx = m.x;
-                int cz = m.y;
-
-                if (cx < 0 || cx >= _cubeM.sizeX || cz < 0 || cz >= _cubeM.sizeZ)
+                if (m.x < 0 || m.x >= _cubeM.sizeX || m.y < 0 || m.y >= _cubeM.sizeZ)
                     continue;
 
-                _gameM.Board.ApplyMove(cx, cz, TokenTypes.PlayerTwo);
+                board.ApplyMove(m.x, m.y, TokenTypes.PlayerTwo);
                 int score = Minimax(_maxDepth - 1, false);
-                _gameM.Board.UndoMove(cx, cz);
+                board.UndoMove(m.x, m.y);
 
                 if (score > bestScore)
                 {
@@ -135,54 +132,38 @@ namespace QuantumConnect
             }
 
             if (bestMove.x < 0 || bestMove.y < 0)
-            {
                 bestMove = candidates[Random.Range(0, candidates.Count)];
-            }
 
-            int bx = bestMove.x;
-            int bz = bestMove.y;
-            if (bx < 0 || bx >= _cubeM.sizeX || bz < 0 || bz >= _cubeM.sizeZ)
-            {
-                Debug.LogWarning($"AI: bestMove out of range ({bx},{bz}). Aborting AI move.");
-                yield break;
-            }
-
-            var faceForBest = _cubeM.DetermineFaceForDrop(board, bx, bz);
-            yield return ExecuteMove(faceForBest, bx, bz);
+            var faceForBest = _cubeM.DetermineFaceForDrop(board, bestMove.x, bestMove.y);
+            yield return ExecuteMove(faceForBest, bestMove.x, bestMove.y);
         }
 
         int EvaluateBoard()
         {
+            // Slight center preference.
             Vector2 centre = new Vector2((_cubeM.sizeX - 1) / 2f, (_cubeM.sizeZ - 1) / 2f);
             int score = 0;
-            var board = _gameM.Board;
-            var moves = _cubeM.GetAllValidMoves(board);
+
+            var moves = _cubeM.GetAllValidMoves(_gameM.Board);
             for (int i = 0; i < moves.Count; i++)
             {
                 var mv = moves[i];
-                Vector2 cell = new Vector2(mv.x, mv.y);
-                float distSq = (cell - centre).sqrMagnitude;
-                score -= Mathf.RoundToInt(distSq);
+                Vector2 p = new Vector2(mv.x, mv.y);
+                score -= Mathf.RoundToInt((p - centre).sqrMagnitude);
             }
             return score;
         }
 
         int Minimax(int depth, bool isMaximizing)
         {
-            if (_gameM.Board.CheckAnyWin(TokenTypes.PlayerTwo))
-                return 1000 - (_maxDepth - depth);
+            var b = _gameM.Board;
 
-            if (_gameM.Board.CheckAnyWin(TokenTypes.PlayerOne))
-                return -1000 + (_maxDepth - depth);
+            if (b.CheckAnyWin(TokenTypes.PlayerTwo)) return 1000 - (_maxDepth - depth);
+            if (b.CheckAnyWin(TokenTypes.PlayerOne)) return -1000 + (_maxDepth - depth);
+            if (depth == 0) return EvaluateBoard();
 
-            if (depth == 0)
-                return EvaluateBoard();
-
-            var board = _gameM.Board;
-            var moves = _cubeM.GetAllValidMoves(board);
-
-            if (moves.Count == 0)
-                return 0;
+            var moves = _cubeM.GetAllValidMoves(b);
+            if (moves.Count == 0) return 0;
 
             if (isMaximizing)
             {
@@ -190,9 +171,9 @@ namespace QuantumConnect
                 for (int i = 0; i < moves.Count; i++)
                 {
                     var m = moves[i];
-                    _gameM.Board.ApplyMove(m.x, m.y, TokenTypes.PlayerTwo);
+                    b.ApplyMove(m.x, m.y, TokenTypes.PlayerTwo);
                     int val = Minimax(depth - 1, false);
-                    _gameM.Board.UndoMove(m.x, m.y);
+                    b.UndoMove(m.x, m.y);
                     if (val > best) best = val;
                 }
                 return best;
@@ -203,9 +184,9 @@ namespace QuantumConnect
                 for (int i = 0; i < moves.Count; i++)
                 {
                     var m = moves[i];
-                    _gameM.Board.ApplyMove(m.x, m.y, TokenTypes.PlayerOne);
+                    b.ApplyMove(m.x, m.y, TokenTypes.PlayerOne);
                     int val = Minimax(depth - 1, true);
-                    _gameM.Board.UndoMove(m.x, m.y);
+                    b.UndoMove(m.x, m.y);
                     if (val < best) best = val;
                 }
                 return best;
@@ -223,7 +204,7 @@ namespace QuantumConnect
                 for (int j = 0; j < moves.Count; j++)
                 {
                     var m = moves[j];
-                    if (_gameM.Board.IsWinningMove(m.x, m.y, token))
+                    if (board.IsWinningMove(m.x, m.y, token))
                     {
                         move = m; face = f; return true;
                     }
