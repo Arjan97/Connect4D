@@ -187,7 +187,7 @@ namespace QuantumConnect
             _dropper = new TokenDropper(services);
             _gameVfx?.Initialize(services, _board);
             _bhM?.Initialize(this, _cubeM, central?.Audio, central?.Tuning);
-            _aiM?.Initialize(this, _cubeM, central?.Tuning);
+            _aiM?.Initialize(this, _cubeM, central?.Tuning, central?.GameVfx);
             _appM?.Initialize(central?.Audio);
             _cubeM.Initialize(CentralManager.Instance?.Tuning, respawn: true);
         }

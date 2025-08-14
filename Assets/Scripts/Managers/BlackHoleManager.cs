@@ -146,19 +146,13 @@ namespace QuantumConnect
             {
                 if (data.Instance != null) Destroy(data.Instance);
                 _map.Remove(src);
+                _cubeM.Cells[src.x, src.y, src.z] = null; 
+                RestoreCellAt(src);
+                return;
             }
 
-            var center = CubeManager.CenterOffset(_cubeM.sizeX, _cubeM.sizeY, _cubeM.sizeZ, _cubeM.CellSpacing);
-            var localPos = CubeManager.LocalFromIndices(src.x, src.y, src.z, _cubeM.CellSpacing, center);
-            localPos -= center;
-
-            var go = Instantiate(_cubeM.CellPrefab, _cubeM.CubeContainer);
-            go.transform.localPosition = localPos;
-            go.transform.localRotation = Quaternion.identity;
-
-            var newCell = go.GetComponent<Cell>();
-            newCell.Initialize(src.x, src.y, src.z);
-            _cubeM.Cells[src.x, src.y, src.z] = newCell;
+            if (_cubeM.Cells[src.x, src.y, src.z] == null)
+                RestoreCellAt(src);
         }
         #endregion
 
@@ -177,21 +171,21 @@ namespace QuantumConnect
                 if (coord != src) candidates.Add(coord);
             }
             if (candidates.Count == 0) return;
-
             var dst = candidates[Random.Range(0, candidates.Count)];
 
             var original = cells[src.x, src.y, src.z];
-            Vector3 worldPos = original != null
-                ? original.transform.position
-                : _cubeM.GetCellWorldPosition(src.x, src.y, src.z);
-
             if (original != null)
             {
                 Destroy(original.gameObject);
                 cells[src.x, src.y, src.z] = null;
             }
 
-            var bhGO = Instantiate(_blackHolePrefab, worldPos, Quaternion.identity, _cubeM.CubeContainer);
+            var center = CubeManager.CenterOffset(_cubeM.sizeX, _cubeM.sizeY, _cubeM.sizeZ, _cubeM.CellSpacing);
+            var localPos = CubeManager.LocalFromIndices(src.x, src.y, src.z, _cubeM.CellSpacing, center);
+
+            var bhGO = Instantiate(_blackHolePrefab, _cubeM.CubeContainer);
+            bhGO.transform.localPosition = localPos;
+            bhGO.transform.localRotation = Quaternion.identity;
 
             var cellComp = bhGO.GetComponent<Cell>() ?? bhGO.AddComponent<Cell>();
             cellComp.Initialize(src.x, src.y, src.z);
@@ -201,6 +195,24 @@ namespace QuantumConnect
             _audioM?.PlayWarp();
 
             _map[src] = new BlackHoleData { Destination = dst, Instance = bhGO };
+        }
+
+        void RestoreCellAt(Vector3Int coord)
+        {
+            var existing = _cubeM.Cells[coord.x, coord.y, coord.z];
+            if (existing != null && existing.gameObject != null) return; 
+
+            var center = CubeManager.CenterOffset(_cubeM.sizeX, _cubeM.sizeY, _cubeM.sizeZ, _cubeM.CellSpacing);
+            var localPos = CubeManager.LocalFromIndices(coord.x, coord.y, coord.z, _cubeM.CellSpacing, center);
+
+            var go = Instantiate(_cubeM.CellPrefab, _cubeM.CubeContainer);
+            go.transform.localPosition = localPos;
+            go.transform.localRotation = Quaternion.identity;
+
+            var newCell = go.GetComponent<Cell>() ?? go.AddComponent<Cell>();
+            newCell.Initialize(coord.x, coord.y, coord.z);
+
+            _cubeM.Cells[coord.x, coord.y, coord.z] = newCell;
         }
 
         IEnumerator WarpInBlackHole(Transform tf)
