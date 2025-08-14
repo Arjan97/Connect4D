@@ -148,18 +148,9 @@ namespace QuantumConnect
                 _map.Remove(src);
             }
 
-            Vector3 centerOffset = new(
-                (_cubeM.sizeX - 1) * _cubeM.CellSpacing.x * 0.5f,
-                (_cubeM.sizeY - 1) * _cubeM.CellSpacing.y * 0.5f,
-                (_cubeM.sizeZ - 1) * _cubeM.CellSpacing.z * 0.5f
-            );
-
-            Vector3 localPos = new(
-                src.x * _cubeM.CellSpacing.x,
-                src.y * _cubeM.CellSpacing.y,
-                src.z * _cubeM.CellSpacing.z
-            );
-            localPos -= centerOffset;
+            var center = CubeManager.CenterOffset(_cubeM.sizeX, _cubeM.sizeY, _cubeM.sizeZ, _cubeM.CellSpacing);
+            var localPos = CubeManager.LocalFromIndices(src.x, src.y, src.z, _cubeM.CellSpacing, center);
+            localPos -= center;
 
             var go = Instantiate(_cubeM.CellPrefab, _cubeM.CubeContainer);
             go.transform.localPosition = localPos;

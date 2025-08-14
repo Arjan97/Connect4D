@@ -83,17 +83,7 @@ namespace QuantumConnect
 
         public Vector3 GetCellWorldPosition(int x, int y, int z)
         {
-            var c = Cells[x, y, z];
-            if (c != null) return c.transform.position;
-
-            Vector3 centerOffset = new(
-                (sizeX - 1) * _cellSpacing.x * 0.5f,
-                (sizeY - 1) * _cellSpacing.y * 0.5f,
-                (sizeZ - 1) * _cellSpacing.z * 0.5f
-            );
-
-            Vector3 local = new Vector3(x * _cellSpacing.x, y * _cellSpacing.y, z * _cellSpacing.z) - centerOffset;
-            return CubeContainer.TransformPoint(local);
+            return WorldFromIndices(CubeContainer, x, y, z, sizeX, sizeY, sizeZ, _cellSpacing);
         }
 
         public void SetCellVisible(int x, int y, int z, bool visible)
@@ -135,6 +125,27 @@ namespace QuantumConnect
         public bool IsEdge(int x, int z)
         {
             return x == 0 || x == sizeX - 1 || z == 0 || z == sizeZ - 1;
+        }
+        public static Vector3 CenterOffset(int sizeX, int sizeY, int sizeZ, Vector3 spacing)
+        {
+            return new Vector3(
+                (sizeX - 1) * spacing.x * 0.5f,
+                (sizeY - 1) * spacing.y * 0.5f,
+                (sizeZ - 1) * spacing.z * 0.5f
+            );
+        }
+
+        public static Vector3 LocalFromIndices(int x, int y, int z, Vector3 spacing, Vector3 centerOffset)
+        {
+            return new Vector3(x * spacing.x, y * spacing.y, z * spacing.z) - centerOffset;
+        }
+
+        public static Vector3 WorldFromIndices(Transform container, int x, int y, int z,
+                                               int sizeX, int sizeY, int sizeZ, Vector3 spacing)
+        {
+            var center = CenterOffset(sizeX, sizeY, sizeZ, spacing);
+            var local = LocalFromIndices(x, y, z, spacing, center);
+            return container.TransformPoint(local);
         }
 
         public List<Vector2Int> GetAllValidMoves(BoardModel board)
@@ -228,12 +239,7 @@ namespace QuantumConnect
             container.transform.position = _startPosition;
             container.transform.rotation = Quaternion.identity;
             CubeContainer = container.transform;
-
-            Vector3 centerOffset = new(
-                (sizeX - 1) * _cellSpacing.x * 0.5f,
-                (sizeY - 1) * _cellSpacing.y * 0.5f,
-                (sizeZ - 1) * _cellSpacing.z * 0.5f
-            );
+            var center = CenterOffset(sizeX, sizeY, sizeZ, _cellSpacing);
 
             for (int x = 0; x < sizeX; x++)
                 for (int y = 0; y < sizeY; y++)
@@ -242,9 +248,7 @@ namespace QuantumConnect
                         bool isOuter = x == 0 || x == sizeX - 1 || y == 0 || y == sizeY - 1 || z == 0 || z == sizeZ - 1;
                         if (!isOuter) continue;
 
-                        Vector3 localPos = new(x * _cellSpacing.x, y * _cellSpacing.y, z * _cellSpacing.z);
-                        localPos -= centerOffset;
-
+                        var localPos = LocalFromIndices(x, y, z, _cellSpacing, center);
                         var go = Instantiate(_cellPrefab, CubeContainer);
                         go.transform.localPosition = localPos;
                         go.transform.localRotation = Quaternion.identity;
