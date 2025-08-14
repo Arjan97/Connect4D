@@ -15,13 +15,15 @@ namespace QuantumConnect
         readonly CubeManager _cubeM;
         readonly BlackHoleManager _bhM;
         readonly IAudioService _audio;
+        readonly IBoardRules _rules;
 
-        public TokenDropper(CubeManager cube, BlackHoleManager holes, IAudioService audio, GameTuning tuning)
+        public TokenDropper(CubeManager cube, BlackHoleManager holes, IAudioService audio, IBoardRules rules, GameTuning tuning)
         {
             _cubeM = cube;
             _bhM = holes;
             _audio = audio;
             _tuning = tuning;
+            _rules = rules;
         }
         #endregion
 
@@ -44,7 +46,7 @@ namespace QuantumConnect
                 yield break;
             }
 
-            int y = FindDropY(board, x, z);
+            int y = _rules.FindDropY(board, x, z);
             if (y < 0) yield break;
 
             var placed = currentPlayer == 0 ? TokenTypes.PlayerOne : TokenTypes.PlayerTwo;
@@ -105,7 +107,7 @@ namespace QuantumConnect
                         z = (holeSrc.Value.z == 0 || holeSrc.Value.z == _cubeM.sizeZ - 1)
                             ? _cubeM.sizeZ - 1 - holeSrc.Value.z : z;
 
-                        y = FindDropY(board, x, z);
+                        y = _rules.FindDropY(board, x, z);
                         if (y < 0) yield break;
 
                         Vector3 topOpp = _cubeM.GetCellWorldPosition(x, _cubeM.sizeY - 1, z);
@@ -129,7 +131,8 @@ namespace QuantumConnect
                 yield return null;
             }
 
-            board.cells[x, y, z] = placed;
+            int appliedY = _rules.ApplyMove(board, x, z, placed);
+            if (appliedY >= 0) y = appliedY;
 
             var oldCell = _cubeM.Cells[x, y, z];
             if (oldCell != null)
@@ -146,13 +149,6 @@ namespace QuantumConnect
         #region Private helpers
         static bool InBounds(BoardModel b, int x, int z)
             => x >= 0 && x < b.sizeX && z >= 0 && z < b.sizeZ;
-
-        int FindDropY(BoardModel b, int x, int z)
-        {
-            for (int yy = 0; yy < b.sizeY; yy++)
-                if (b.cells[x, yy, z] == TokenTypes.None) return yy;
-            return -1;
-        }
 
         List<(int y, float worldY)> BuildPassList(int cx, int cz, int yDest)
         {

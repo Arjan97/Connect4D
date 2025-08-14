@@ -17,22 +17,11 @@ namespace QuantumConnect
         [Header("Raycast")]
         [SerializeField] float _maxRayDistance = 1000f;
 
-        [SerializeField] bool _acceptInput = true;
-        #endregion
-
-        #region Properties
-        public bool AcceptInput
-        {
-            get => _acceptInput;
-            set => _acceptInput = value;
-        }
         #endregion
 
         #region Unity
         void Update()
         {
-            if (!_acceptInput) return;
-
             if (!TryGetPressPosition(out var screenPos, out var pointerId))
                 return;
 

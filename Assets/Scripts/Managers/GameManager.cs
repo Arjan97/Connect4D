@@ -39,7 +39,6 @@ namespace QuantumConnect
         IGameState _state;
         Coroutine _stateTick;
         bool _gameOver;
-        public bool IsResolving { get; private set; }
         #endregion
 
         #region Unity
@@ -135,6 +134,8 @@ namespace QuantumConnect
 
         public bool IsOver => _gameOver;
         public int CurrentPlayer => _turns.Current;
+        public bool IsResolving { get; private set; }
+        public IBoardRules Rules => _rules;
         public BoardModel Board => _board;
         public TurnService Turns => _turns;
 
@@ -171,7 +172,7 @@ namespace QuantumConnect
             _board = new BoardModel(_cubeM.sizeX, _cubeM.sizeY, _cubeM.sizeZ);
             _rules = new BoardRules();
             _tokenFactory = new TokenFactory(_playerOnePrefab, _playerTwoPrefab, _aiPrefab);
-            _dropper = new TokenDropper(_cubeM, _bhM, _audioM, central?.Tuning);
+            _dropper = new TokenDropper(_cubeM, _bhM, _audioM, _rules, central?.Tuning);
             _turns = new TurnService();
             _scores = new ScoreService();
         }
