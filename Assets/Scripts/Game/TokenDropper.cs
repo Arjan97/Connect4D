@@ -19,20 +19,14 @@ namespace QuantumConnect
         readonly IBoardRules _rules;
         #endregion
 
-        public TokenDropper(
-            CubeManager cube,
-            BlackHoleManager holes,
-            IAudioService audio,
-            IBoardRules rules,
-            GameTuning tuning,
-            IGameVfx vfx)
+        public TokenDropper(GameServices s)
         {
-            _cubeM = cube;
-            _bhM = holes;
-            _audio = audio;
-            _rules = rules;
-            _tuning = tuning;
-            _vfx = vfx;
+            _cubeM = s.Cube;
+            _bhM = s.BlackHoles;
+            _audio = s.Audio;
+            _rules = s.Rules;
+            _tuning = s.Tuning;
+            _vfx = s.Vfx;
         }
 
         #region Public API

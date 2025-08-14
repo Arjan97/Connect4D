@@ -5,6 +5,7 @@ namespace QuantumConnect
 {
     /// <summary>
     /// Thin orchestrator for match flow and the state machine. Delegates rules, drops, FX, UI, AI.
+    /// Composition root for gameplay services; re-inits cleanly on scene switches.
     /// </summary>
     public class GameManager : MonoBehaviour, ICellInteractor
     {
@@ -16,14 +17,14 @@ namespace QuantumConnect
         [SerializeField] Material _aiTwoMaterial;
         #endregion
 
-        #region Dependencies (scene singletons)
+        #region Dependencies (scene objects)
         CubeManager _cubeM;
         BlackHoleManager _bhM;
-        IAudioService _audioM;
         AIManager _aiM;
         UIManager _uiM;
         SessionManager _sessionM;
         GameVfx _gameVfx;
+        AppStateManager _appM;
         #endregion
 
         #region Services (pure logic)
@@ -42,13 +43,6 @@ namespace QuantumConnect
         #endregion
 
         #region Unity
-        void Awake()
-        {
-            var central = CentralManager.Instance;
-            _sessionM = central?.Session;
-            _audioM = central?.Audio;
-        }
-
         IEnumerator Start()
         {
             yield return null;
@@ -62,8 +56,17 @@ namespace QuantumConnect
             SetState(new SetupState());
         }
 
+        void OnEnable()
+        {
+            var central = CentralManager.Instance;
+            if (central != null) central.SceneRefsUpdated += OnSceneRefsUpdated;
+        }
+
         void OnDisable()
         {
+            var central = CentralManager.Instance;
+            if (central != null) central.SceneRefsUpdated -= OnSceneRefsUpdated;
+
             if (_stateTick != null) StopCoroutine(_stateTick);
         }
         #endregion
@@ -108,6 +111,7 @@ namespace QuantumConnect
         }
 
         public void UpdateTurnUI() => _uiM?.UpdateTurn(Mode, _turns.Current);
+        public void ShowRetryIfNeededUI() => _uiM?.ShowRetryIfNeeded(Mode);
 
         public void RequestAIMove()
         {
@@ -153,6 +157,8 @@ namespace QuantumConnect
             _aiM = central?.AI ?? FindFirstObjectByType<AIManager>();
             _uiM = central?.UI ?? FindFirstObjectByType<UIManager>();
             _gameVfx = central?.GameVfx ?? FindFirstObjectByType<GameVfx>();
+            _appM = central?.App ?? FindFirstObjectByType<AppStateManager>();
+            _sessionM = central?.Session ?? FindFirstObjectByType<SessionManager>();
         }
 
         bool EnsureDependencies()
@@ -161,20 +167,29 @@ namespace QuantumConnect
             if (_uiM == null) { Debug.LogError("GameManager: UIManager not found in scene."); return false; }
             if (_bhM == null) Debug.LogWarning("GameManager: BlackHoleManager not found (black holes disabled).");
             if (_aiM == null) Debug.LogWarning("GameManager: AIManager not found (AI disabled).");
-            if (_gameVfx == null) Debug.LogWarning("GameManager: WinFx not found (using basic fallback).");
+            if (_gameVfx == null) Debug.LogWarning("GameManager: GameVfx not found (win highlight disabled).");
             return true;
         }
 
         void InitServices()
         {
             var central = CentralManager.Instance;
+            var services = central.BuildGameServices();   
 
+            // Model & logic
             _board = new BoardModel(_cubeM.sizeX, _cubeM.sizeY, _cubeM.sizeZ);
-            _rules = new BoardRules();
-            _tokenFactory = new TokenFactory(_playerOnePrefab, _playerTwoPrefab, _aiPrefab);
-            _dropper = new TokenDropper(_cubeM, _bhM, _audioM, _rules, central?.Tuning, central?.GameVfx);
+            _rules = central.Rules; 
             _turns = new TurnService();
             _scores = new ScoreService();
+            _tokenFactory = new TokenFactory(_playerOnePrefab, _playerTwoPrefab, _aiPrefab);
+
+            // Inject deps
+            _dropper = new TokenDropper(services);
+            _gameVfx?.Initialize(services, _board);
+            _bhM?.Initialize(this, _cubeM, central?.Audio, central?.Tuning);        
+            _aiM?.Initialize(this, _cubeM, central?.Tuning);
+            _appM?.Initialize(central?.Audio);
+            _cubeM.Initialize(CentralManager.Instance?.Tuning, respawn: true);
         }
         #endregion
 
@@ -207,6 +222,20 @@ namespace QuantumConnect
             _uiM.UpdateTurn(Mode, _turns.Current);
 
             _bhM?.TrySpawnRandomBlackHole();
+        }
+
+        void OnSceneRefsUpdated()
+        {
+            if (!isActiveAndEnabled) return;
+
+            StopAllCoroutines();
+
+            BindDependencies();
+            if (!EnsureDependencies()) return;
+
+            InitServices();
+            _uiM.HideWinAndRetry();
+            SetState(new SetupState());
         }
         #endregion
     }

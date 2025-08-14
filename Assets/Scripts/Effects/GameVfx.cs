@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using UnityEngine;
 
 namespace QuantumConnect
@@ -10,11 +11,11 @@ namespace QuantumConnect
     public class GameVfx : MonoBehaviour, IGameVfx
     {
         #region Deps 
-        CubeManager CubeM => CentralManager.Instance?.Cube ?? FindFirstObjectByType<CubeManager>();
-        IAudioService AudioM => CentralManager.Instance?.Audio ?? FindFirstObjectByType<AudioManager>();
-        IBoardRules BoardRules => CentralManager.Instance?.Rules;
-        GameTuning Tuning => CentralManager.Instance?.Tuning;
-        BoardModel Board => CentralManager.Instance?.Game?.Board;
+        CubeManager _cube;
+        IAudioService _audio;
+        IBoardRules _rules;
+        GameTuning _tuning;
+        BoardModel _board;
         #endregion
 
         struct RendBackup
@@ -27,6 +28,14 @@ namespace QuantumConnect
         readonly Dictionary<MeshRenderer, RendBackup> _original = new();
 
         #region Public API
+        public void Initialize(GameServices s, BoardModel board)
+        {
+            _cube = s.Cube;
+            _audio = s.Audio;
+            _rules = s.Rules;
+            _tuning = s.Tuning;
+            _board = board;
+        }
         public Coroutine PlayWinLine(List<Vector3Int> winningLine)
         {
             if (winningLine == null || winningLine.Count == 0) return null;
@@ -58,18 +67,18 @@ namespace QuantumConnect
 
         public IEnumerator BlinkCell(int x, int y, int z, float dropSpeed)
         {
-            if (!CubeM) yield break;
-            var cell = CubeM.Cells[x, y, z];
+            if (!_cube) yield break;
+            var cell = _cube.Cells[x, y, z];
             if (cell == null) yield break;
 
-            if (Tuning != null && !Tuning.fallBlinkEnabled) yield break;
+            if (_tuning != null && !_tuning.fallBlinkEnabled) yield break;
 
-            float spacingY = CubeM.CellSpacing.y;
+            float spacingY = _cube.CellSpacing.y;
             float layerTime = spacingY <= 0f ? 0.05f : spacingY / Mathf.Max(dropSpeed, 0.0001f);
 
-            float scale = Tuning != null ? Tuning.fallBlinkHoldScale : 0.25f;
-            float minHold = Tuning != null ? Tuning.fallBlinkMinHold : 0.02f;
-            float maxHold = Tuning != null ? Tuning.fallBlinkMaxHold : 0.08f;
+            float scale = _tuning != null ? _tuning.fallBlinkHoldScale : 0.25f;
+            float minHold = _tuning != null ? _tuning.fallBlinkMinHold : 0.02f;
+            float maxHold = _tuning != null ? _tuning.fallBlinkMaxHold : 0.08f;
 
             float hold = Mathf.Clamp(layerTime * Mathf.Max(0f, scale), minHold, maxHold);
 
@@ -115,24 +124,22 @@ namespace QuantumConnect
         #region Private Helpers
         IEnumerator PlayWinRoutine(List<Vector3Int> winningLine)
         {
-            var rules = BoardRules;
-            var board = Board;
-            if (rules == null || board == null) yield break;
+            if (_cube == null || _rules == null || _board == null) yield break;
 
-            float blink = Tuning != null ? Mathf.Max(0.05f, Tuning.blinkInterval) : 0.5f;
+            float blink = _tuning != null ? Mathf.Max(0.05f, _tuning.blinkInterval) : 0.5f;
 
             for (int i = 0; i < winningLine.Count; i++)
             {
                 var c = winningLine[i];
-                if (!rules.InBounds(board, c.x, c.y, c.z)) continue;
+                if (!_rules.InBounds(_board, c.x, c.y, c.z)) continue;
 
-                CubeM.SetCellVisible(c.x, c.y, c.z, true);
+                _cube.SetCellVisible(c.x, c.y, c.z, true);
 
-                var cell = CubeM.Cells[c.x, c.y, c.z];
+                var cell = _cube.Cells[c.x, c.y, c.z];
                 var rend = cell ? cell.GetComponent<MeshRenderer>() : null;
                 if (rend != null) ApplyHighlight(rend);
 
-                AudioM?.PlayPassThrough();
+                _audio?.PlayPassThrough();
 
                 yield return new WaitForSeconds(blink);
             }
@@ -155,7 +162,7 @@ namespace QuantumConnect
             }
 
             var mat = rend.material;
-            var winCol = Tuning != null ? Tuning.winHighlight : Color.green;
+            var winCol = _tuning != null ? _tuning.winHighlight : Color.green;
             if (winCol.a <= 0f) winCol.a = 0.5f; 
 
             mat.color = winCol;

@@ -1,4 +1,4 @@
-using System.Data;
+using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -33,6 +33,8 @@ namespace QuantumConnect
         GameVfx _gameVfx;
         #endregion
 
+        public event Action SceneRefsUpdated;
+
         #region Properties
         public GameManager Game => _gameManager;
         public CubeManager Cube => _cubeManager;
@@ -44,9 +46,20 @@ namespace QuantumConnect
         public SessionManager Session => _sessionManager;
         public GameTuning Tuning => _tuning;
         public GameVfx GameVfx => _gameVfx;
-        public IBoardRules Rules => _boardRules ??= new BoardRules();
 
+        public IBoardRules Rules => _boardRules ??= new BoardRules();
         public IAudioService Audio => _audioManager;
+        public GameServices BuildGameServices()
+        {
+            return new GameServices(
+                _cubeManager,
+                _blackHoleManager,
+                _audioManager,
+                Rules,
+                _tuning,
+                _gameVfx   
+            );
+        }
         #endregion
 
         #region Unity Lifecycle
@@ -59,8 +72,9 @@ namespace QuantumConnect
                 return;
             }
             Instance = this;
-
             DontDestroyOnLoad(gameObject);
+
+            if (_boardRules == null) _boardRules = new BoardRules();
             BindSceneLocals();
         }
         #endregion
@@ -88,7 +102,7 @@ namespace QuantumConnect
             FindInSceneIfNull(ref _sessionManager, nameof(SessionManager));
             FindInSceneIfNull(ref _appManager, nameof(AppStateManager));
             FindInSceneIfNull(ref _gameVfx, nameof(GameVfx));
-
+            SceneRefsUpdated?.Invoke();
         }
         #endregion
     }

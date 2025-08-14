@@ -15,7 +15,7 @@ namespace QuantumConnect
 
             if (g.IsOver)
             {
-                CentralManager.Instance?.UI?.ShowRetryIfNeeded(g.Mode);
+                g.ShowRetryIfNeededUI();
                 g.SetState(new EndedState());
                 yield break;
             }

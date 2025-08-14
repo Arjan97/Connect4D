@@ -6,13 +6,12 @@ namespace QuantumConnect
 {
     /// <summary>
     /// Handles black hole spawning, removal, visuals, and destination mapping.
-    /// Reads all tunables from GameTuning via CentralManager.
     /// </summary>
     public class BlackHoleManager : MonoBehaviour
     {
         #region Fields
         [Header("Prefabs")]
-        [SerializeField] GameObject _blackHolePrefab;
+        [SerializeField] private GameObject _blackHolePrefab;
         #endregion
 
         #region Properties
@@ -36,14 +35,29 @@ namespace QuantumConnect
         }
         #endregion
 
-        #region Unity
-        void Start()
+        #region Lifecycle
+        void OnDisable()
         {
-            var central = CentralManager.Instance;
-            _gameM = central != null ? central.Game : null;
-            _cubeM = central != null ? central.Cube : null;
-            _audioM = central != null ? central.Audio : null;
-            _tuning = central != null ? central.Tuning : null;
+            StopAllCoroutines();
+        }
+        #endregion
+
+        #region Init / Readiness
+        public void Initialize(GameManager game, CubeManager cube, IAudioService audio, GameTuning tuning)
+        {
+            _gameM = game;
+            _cubeM = cube;
+            _audioM = audio;
+            _tuning = tuning;
+        }
+
+        bool IsReadyForSpawn(BoardModel board = null)
+        {
+            if (_cubeM == null) return false;
+            if (_cubeM.CubeContainer == null || _cubeM.Cells == null) return false;
+            if (_blackHolePrefab == null) return false;
+            if (board != null && board.cells == null) return false;
+            return true;
         }
         #endregion
 
@@ -53,14 +67,9 @@ namespace QuantumConnect
             foreach (var kv in _map.Values) if (kv.Instance != null) Destroy(kv.Instance);
             _map.Clear();
 
-            if (_cubeM == null || board == null)
+            if (!IsReadyForSpawn(board))
             {
-                Debug.LogWarning("BHM.Init: missing cube or board.");
-                return;
-            }
-            if (_blackHolePrefab == null)
-            {
-                Debug.LogWarning("BHM.Init: _blackHolePrefab not assigned.");
+                Debug.LogWarning("BlackHoleManager.InitializeBlackHoles: Not ready (cube/board/prefab missing). Skipping.");
                 return;
             }
 
@@ -78,18 +87,10 @@ namespace QuantumConnect
             minInit = Mathf.Clamp(minInit, 0, maxInit);
 
             int maxCount = Mathf.Min(maxInit, avail.Count);
-            if (maxCount <= 0)
-            {
-                Debug.Log($"BHM.Init: no spawnable cells (avail={avail.Count}, maxInit={maxInit}).");
-                return;
-            }
+            if (maxCount <= 0) return;
 
             int spawnCount = Random.Range(minInit, maxCount + 1);
-            if (spawnCount <= 0)
-            {
-                Debug.Log($"BHM.Init: spawnCount resolved to 0 (minInit={minInit}, maxCount={maxCount}).");
-                return;
-            }
+            if (spawnCount <= 0) return;
 
             for (int i = 0; i < spawnCount; i++)
             {
@@ -98,9 +99,10 @@ namespace QuantumConnect
                 avail.RemoveAt(idx);
             }
         }
+
         public void TrySpawnRandomBlackHole()
         {
-            if (_gameM == null || _cubeM == null) return;
+            if (_gameM == null || !IsReadyForSpawn(_gameM.Board)) return;
 
             int cap = _tuning ? _tuning.maxConcurrentBlackHoles : 6;
             if (_map.Count >= cap) return;
@@ -138,7 +140,7 @@ namespace QuantumConnect
 
         public void RemoveBlackHole(Vector3Int src)
         {
-            if (_cubeM == null) return;
+            if (_cubeM == null || _cubeM.CubeContainer == null) return;
 
             if (_map.TryGetValue(src, out var data))
             {
@@ -172,34 +174,37 @@ namespace QuantumConnect
         #region Private
         void CreateBlackHoleAt(Vector3Int src)
         {
-            if (_cubeM == null || _blackHolePrefab == null) return;
+            if (!IsReadyForSpawn()) return;
+            if (_map.ContainsKey(src)) return; 
 
             var candidates = new List<Vector3Int>();
-            foreach (var c in _cubeM.Cells)
+            var cells = _cubeM.Cells;
+            foreach (var c in cells)
             {
-                if (c != null)
-                {
-                    var coord = new Vector3Int(c.X, c.Y, c.Z);
-                    if (coord != src) candidates.Add(coord);
-                }
+                if (c == null) continue;
+                var coord = new Vector3Int(c.X, c.Y, c.Z);
+                if (coord != src) candidates.Add(coord);
             }
             if (candidates.Count == 0) return;
 
             var dst = candidates[Random.Range(0, candidates.Count)];
 
-            var original = _cubeM.Cells[src.x, src.y, src.z];
-            Vector3 worldPos = original != null ? original.transform.position : _cubeM.GetCellWorldPosition(src.x, src.y, src.z);
+            var original = cells[src.x, src.y, src.z];
+            Vector3 worldPos = original != null
+                ? original.transform.position
+                : _cubeM.GetCellWorldPosition(src.x, src.y, src.z);
 
             if (original != null)
             {
                 Destroy(original.gameObject);
-                _cubeM.Cells[src.x, src.y, src.z] = null;
+                cells[src.x, src.y, src.z] = null;
             }
 
             var bhGO = Instantiate(_blackHolePrefab, worldPos, Quaternion.identity, _cubeM.CubeContainer);
+
             var cellComp = bhGO.GetComponent<Cell>() ?? bhGO.AddComponent<Cell>();
             cellComp.Initialize(src.x, src.y, src.z);
-            _cubeM.Cells[src.x, src.y, src.z] = cellComp;
+            cells[src.x, src.y, src.z] = cellComp;
 
             StartCoroutine(WarpInBlackHole(bhGO.transform));
             _audioM?.PlayWarp();
@@ -209,17 +214,22 @@ namespace QuantumConnect
 
         IEnumerator WarpInBlackHole(Transform tf)
         {
-            float dur = _tuning != null ? _tuning.blackHoleWarpInDuration : 0.5f;
+            if (!tf) yield break;
+
+            float dur = (_tuning != null && _tuning.blackHoleWarpInDuration > 0f) ? _tuning.blackHoleWarpInDuration : 0.5f;
             Vector3 targetScale = Vector3.one;
             float t = 0f;
 
+            tf.localScale = Vector3.zero;
+
             while (t < dur)
             {
-                tf.localScale = Vector3.Lerp(Vector3.zero, targetScale, t / dur);
+                if (!tf) yield break; 
+                tf.localScale = Vector3.LerpUnclamped(Vector3.zero, targetScale, t / dur);
                 t += Time.deltaTime;
                 yield return null;
             }
-            tf.localScale = targetScale;
+            if (tf) tf.localScale = targetScale;
         }
         #endregion
     }

@@ -16,12 +16,17 @@ namespace QuantumConnect
         [SerializeField] AppStates _initialState = AppStates.Menu;
 
         AppStates _current;
+        IAudioService _audio;
 
         public AppStates Current => _current;
 
         void Start()
         {
             SetState(_initialState);
+        }
+        public void Initialize(IAudioService audio)
+        {
+            _audio = audio;
         }
 
         public void SetState(AppStates next)
@@ -37,30 +42,29 @@ namespace QuantumConnect
                 case AppStates.Menu:
                     if (SceneManager.GetActiveScene().name != _menuSceneName)
                         SceneManager.LoadScene(_menuSceneName);
-                    music?.PlayMenuMusic();
+                    _audio?.PlayMenuMusic();
                     break;
 
                 case AppStates.Game:
                     if (SceneManager.GetActiveScene().name != _gameSceneName)
                         SceneManager.LoadScene(_gameSceneName);
-                    music?.PlayGameMusic();
+                    _audio?.PlayGameMusic();
                     break;
             }
         }
 
         public void GoToMenu() => SetState(AppStates.Menu);
         public void StartGame() => SetState(AppStates.Game);
-
+    
         void OnEnable() { SceneManager.sceneLoaded += OnSceneLoaded; }
         void OnDisable() { SceneManager.sceneLoaded -= OnSceneLoaded; }
 
         void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            var music = CentralManager.Instance?.Audio;
-            if (music == null) return;
+            if (_audio == null) return;
 
-            if (scene.name == _menuSceneName) music.PlayMenuMusic();
-            else if (scene.name == _gameSceneName) music.PlayGameMusic();
+            if (scene.name == _menuSceneName) _audio.PlayMenuMusic();
+            else if (scene.name == _gameSceneName) _audio.PlayGameMusic();
         }
     }
 }

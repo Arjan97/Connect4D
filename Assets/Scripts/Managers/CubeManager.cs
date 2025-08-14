@@ -6,11 +6,10 @@ namespace QuantumConnect
 {
     /// <summary>
     /// Manages the 3D cube grid: spawn cells, rotations, face checks, valid move queries, and drops.
-    /// Reads layout/rotation from GameTuning via CentralManager.
     /// </summary>
     public class CubeManager : MonoBehaviour
     {
-        #region Backing (will be overridden by GameTuning if present)
+        #region Backing (overridden by Initialize(GameTuning) if provided)
         [Header("Grid Size (fallback when no GameTuning)")]
         public int sizeX = 4;
         public int sizeY = 4;
@@ -36,31 +35,41 @@ namespace QuantumConnect
         public GameObject CellPrefab => _cellPrefab;
         #endregion
 
-        #region Private
-        GameTuning _tuning;
-        #endregion
+        bool _initialized;
 
         #region Unity
-        void Awake()
-        {
-            var central = CentralManager.Instance;
-            _tuning = central != null ? central.Tuning : null;
-
-            if (_tuning != null)
-            {
-                sizeX = _tuning.sizeX;
-                sizeY = _tuning.sizeY;
-                sizeZ = _tuning.sizeZ;
-                _startPosition = _tuning.startPosition;
-                _cellSpacing = _tuning.cellSpacing;
-                _rotationDuration = _tuning.rotationDuration;
-                _rotationPause = _tuning.rotationPause;
-            }
-        }
-
         void Start()
         {
-            SpawnGrid();
+            if (CubeContainer == null)
+                SpawnGrid();
+        }
+        #endregion
+
+        #region DI Init
+        /// <summary>
+        /// Apply tuning values and (optionally) rebuild the grid.
+        /// </summary>
+        public void Initialize(GameTuning tuning, bool respawn = true)
+        {
+            if (tuning != null)
+            {
+                sizeX = tuning.sizeX;
+                sizeY = tuning.sizeY;
+                sizeZ = tuning.sizeZ;
+                _startPosition = tuning.startPosition;
+                _cellSpacing = tuning.cellSpacing;
+                _rotationDuration = tuning.rotationDuration;
+                _rotationPause = tuning.rotationPause;
+            }
+
+            _initialized = true;
+
+            if (respawn)
+            {
+                if (CubeContainer != null)
+                    Destroy(CubeContainer.gameObject);
+                SpawnGrid();
+            }
         }
         #endregion
 
@@ -91,8 +100,12 @@ namespace QuantumConnect
         {
             var cell = Cells[x, y, z];
             if (cell == null) return;
-            var rend = cell.GetComponent<MeshRenderer>();
-            if (rend != null) rend.enabled = visible;
+
+            var rends = cell.GetComponentsInChildren<MeshRenderer>(true);
+            for (int i = 0; i < rends.Length; i++)
+            {
+                if (rends[i]) rends[i].enabled = visible;
+            }
         }
 
         public Vector3Int GetActiveFaceNormal()
@@ -124,7 +137,6 @@ namespace QuantumConnect
             return x == 0 || x == sizeX - 1 || z == 0 || z == sizeZ - 1;
         }
 
-        // NEW SIGS: pass the board in
         public List<Vector2Int> GetAllValidMoves(BoardModel board)
         {
             var list = new List<Vector2Int>();
@@ -205,7 +217,6 @@ namespace QuantumConnect
 
         public void RotateLeft() { StartCoroutine(AnimateContainerRotation(Vector3.up, 90f)); }
         public void RotateRight() { StartCoroutine(AnimateContainerRotation(Vector3.up, -90f)); }
-
         #endregion
 
         #region Private

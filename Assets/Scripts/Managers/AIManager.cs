@@ -20,20 +20,11 @@ namespace QuantumConnect
 
         void Awake()
         {
-            var central = CentralManager.Instance;
-
-            _gameM = central?.Game ?? FindFirstObjectByType<GameManager>();
-            _cubeM = central?.Cube ?? FindFirstObjectByType<CubeManager>();
-            _tuning = central?.Tuning;
-
             ApplyTuning();
         }
 
         void OnEnable()
         {
-            if (_gameM == null) _gameM = FindFirstObjectByType<GameManager>();
-            if (_cubeM == null) _cubeM = FindFirstObjectByType<CubeManager>();
-            if (_tuning == null) _tuning = CentralManager.Instance?.Tuning;
             ApplyTuning();
         }
 
@@ -43,17 +34,16 @@ namespace QuantumConnect
             _moveDelay = _tuning != null ? _tuning.aiMoveDelay : 0.7f;
             _rotationChance = _tuning != null ? _tuning.aiRotationChance : 0.3f;
         }
+        public void Initialize(GameManager game, CubeManager cube, GameTuning tuning)
+        {
+            _gameM = game;
+            _cubeM = cube;
+            _tuning = tuning;
+            ApplyTuning();
+        }
 
         public void MakeMove()
         {
-            if (_gameM == null) _gameM = FindFirstObjectByType<GameManager>();
-            if (_cubeM == null) _cubeM = FindFirstObjectByType<CubeManager>();
-
-            if (_gameM == null || _cubeM == null)
-            {
-                Debug.LogWarning("AIManager: missing GameManager or CubeManager in this scene.");
-                return;
-            }
             if (!_gameM.Turns.IsAiTurn(_gameM.Mode)) return;
 
             StartCoroutine(MakeMoveRoutine());

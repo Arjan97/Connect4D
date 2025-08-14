@@ -8,8 +8,7 @@ namespace QuantumConnect
         public void Enter(GameManager g)
         {
             if (!g.Turns.IsHumanTurn(g.Mode)) { g.SetState(new AITurnState()); return; }
-
-            CentralManager.Instance?.UI?.UpdateTurn(g.Mode, g.Turns.Current);
+            g.UpdateTurnUI();
         }
 
         public void Exit(GameManager g) { }
