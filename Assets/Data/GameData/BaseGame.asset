@@ -23,6 +23,10 @@ MonoBehaviour:
   dropSpeed: 8
   blinkInterval: 0.5
   winHighlight: {r: 0.13512325, g: 1, b: 0, a: 0}
+  fallBlinkEnabled: 1
+  fallBlinkHoldScale: 0.264
+  fallBlinkMinHold: 0.011
+  fallBlinkMaxHold: 0.053
   blackHoleSpawnChance: 0.4
   minInitialBlackHoles: 4
   maxInitialBlackHoles: 8
