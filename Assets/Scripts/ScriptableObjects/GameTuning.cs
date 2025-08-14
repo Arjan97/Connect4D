@@ -24,6 +24,13 @@ namespace QuantumConnect
         public float blinkInterval = 0.5f;
         public Color winHighlight;
 
+        [Header("Fall Blink FX")]
+        public bool fallBlinkEnabled = true;
+        [Tooltip("Scales the computed hold time per layer (higher = slower blink).")]
+        [Range(0f, 2f)] public float fallBlinkHoldScale = 0.25f;
+        [Range(0f, 0.5f)] public float fallBlinkMinHold = 0.02f;
+        [Range(0f, 0.5f)] public float fallBlinkMaxHold = 0.08f;
+
         [Header("Black Holes")]
         [Range(0f, 1f)] public float blackHoleSpawnChance = 0.1f;
         public int minInitialBlackHoles = 2;
