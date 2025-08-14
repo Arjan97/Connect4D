@@ -6,28 +6,34 @@ using UnityEngine;
 namespace QuantumConnect
 {
     /// <summary>
-    /// Handles token falling (with per-layer blink), optional black-hole warp, and board write.
+    /// Handles token falling.
     /// </summary>
     public class TokenDropper : ITokenDropper
     {
-        #region Ctor deps
+        #region Dependencies
         readonly GameTuning _tuning;
         readonly CubeManager _cubeM;
         readonly BlackHoleManager _bhM;
-        readonly GameVfx _vfx;
+        readonly IGameVfx _vfx;         
         readonly IAudioService _audio;
         readonly IBoardRules _rules;
+        #endregion
 
-        public TokenDropper(CubeManager cube, BlackHoleManager holes, IAudioService audio, IBoardRules rules, GameTuning tuning, GameVfx vfx = null)
+        public TokenDropper(
+            CubeManager cube,
+            BlackHoleManager holes,
+            IAudioService audio,
+            IBoardRules rules,
+            GameTuning tuning,
+            IGameVfx vfx)
         {
             _cubeM = cube;
             _bhM = holes;
             _audio = audio;
-            _tuning = tuning;
             _rules = rules;
+            _tuning = tuning;
             _vfx = vfx;
         }
-        #endregion
 
         #region Public API
         public IEnumerator Drop(
@@ -42,7 +48,7 @@ namespace QuantumConnect
             int x = startXZ.x;
             int z = startXZ.z;
 
-            if (!InBounds(board, x, z))
+            if (!_rules.InBounds(board, x, z))
             {
                 Debug.LogWarning($"TokenDropper.Drop: invalid start indices x:{x} z:{z} (board {board.sizeX}x{board.sizeZ}). Aborting drop.");
                 yield break;
@@ -81,13 +87,16 @@ namespace QuantumConnect
 
                 token.transform.position += Vector3.down * dropSpeed * Time.deltaTime;
 
-                // Blink per layer as token passes it
                 while (nextPassIndex < passList.Count &&
                        token.transform.position.y <= passList[nextPassIndex].worldY)
                 {
                     int passY = passList[nextPassIndex].y;
-                    if (_cubeM.Cells[x, passY, z] != null)
+
+                    _audio?.PlayPassThrough();
+
+                    if (_vfx != null && _cubeM.Cells[x, passY, z] != null)
                         yield return _vfx.BlinkCell(x, passY, z, dropSpeed);
+
                     nextPassIndex++;
                 }
 
@@ -99,23 +108,25 @@ namespace QuantumConnect
                     {
                         warped = true;
                         _audio?.PlayWarp();
-
-                        yield return _vfx.ScaleWarp(token.transform, token.transform.position);
-
                         _bhM.RemoveBlackHole(holeSrc.Value);
 
-                        x = (holeSrc.Value.x == 0 || holeSrc.Value.x == _cubeM.sizeX - 1)
+                        int targetX = (holeSrc.Value.x == 0 || holeSrc.Value.x == _cubeM.sizeX - 1)
                             ? _cubeM.sizeX - 1 - holeSrc.Value.x : x;
-                        z = (holeSrc.Value.z == 0 || holeSrc.Value.z == _cubeM.sizeZ - 1)
+                        int targetZ = (holeSrc.Value.z == 0 || holeSrc.Value.z == _cubeM.sizeZ - 1)
                             ? _cubeM.sizeZ - 1 - holeSrc.Value.z : z;
 
-                        y = _rules.FindDropY(board, x, z);
-                        if (y < 0) yield break;
+                        int targetY = _rules.FindDropY(board, targetX, targetZ);
+                        if (targetY < 0) yield break;
 
-                        Vector3 topOpp = _cubeM.GetCellWorldPosition(x, _cubeM.sizeY - 1, z);
-                        token.transform.position = topOpp + Vector3.up * (_tuning != null ? _tuning.dropHeight : 1.8f);
+                        Vector3 topOpp = _cubeM.GetCellWorldPosition(targetX, _cubeM.sizeY - 1, targetZ)
+                                         + Vector3.up * (_tuning != null ? _tuning.dropHeight : 1.8f);
+
+                        if (_vfx != null) yield return _vfx.ScaleWarp(token.transform, topOpp);
+                        else token.transform.position = topOpp;
+
                         _audio?.PlayTokenLand();
 
+                        x = targetX; z = targetZ; y = targetY;
                         passList = BuildPassList(x, z, y);
                         nextPassIndex = 0;
 
@@ -148,10 +159,7 @@ namespace QuantumConnect
         }
         #endregion
 
-        #region Private helpers
-        static bool InBounds(BoardModel b, int x, int z)
-            => x >= 0 && x < b.sizeX && z >= 0 && z < b.sizeZ;
-
+        #region Private Helpers
         List<(int y, float worldY)> BuildPassList(int cx, int cz, int yDest)
         {
             var list = new List<(int y, float worldY)>();

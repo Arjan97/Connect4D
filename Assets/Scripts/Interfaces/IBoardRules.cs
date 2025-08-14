@@ -12,8 +12,9 @@ namespace QuantumConnect
 
         bool IsWinningMove(BoardModel board, int x, int z, TokenTypes t);
         bool CheckAnyWin(BoardModel board, TokenTypes t, out List<Vector3Int> winningLine);
-
         bool HasAnyEmpty(BoardModel board);
+        bool InBounds(BoardModel board, int x, int z);
+        bool InBounds(BoardModel board, int x, int y, int z);
 
         List<Vector2Int> GetForkMoves(BoardModel board, List<Vector2Int> validMoves, TokenTypes t);
     }

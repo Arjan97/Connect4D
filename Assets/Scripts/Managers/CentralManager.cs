@@ -1,3 +1,4 @@
+using System.Data;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -23,6 +24,8 @@ namespace QuantumConnect
         [SerializeField] UIManager _uiManager;
         [SerializeField] AppStateManager _appManager;
         [SerializeField] SessionManager _sessionManager;
+        [SerializeField] BoardRules _boardRules;
+
         [Header("Scriptable Object")]
         [Tooltip("Game tuning parameters, create one if none existent")]
         [SerializeField] GameTuning _tuning;
@@ -41,6 +44,7 @@ namespace QuantumConnect
         public SessionManager Session => _sessionManager;
         public GameTuning Tuning => _tuning;
         public GameVfx GameVfx => _gameVfx;
+        public IBoardRules Rules => _boardRules ??= new BoardRules();
 
         public IAudioService Audio => _audioManager;
         #endregion
@@ -83,7 +87,8 @@ namespace QuantumConnect
             FindInSceneIfNull(ref _uiManager, nameof(UIManager));
             FindInSceneIfNull(ref _sessionManager, nameof(SessionManager));
             FindInSceneIfNull(ref _appManager, nameof(AppStateManager));
-            FindInSceneIfNull(ref _gameVfx, nameof(GameVfx)); 
+            FindInSceneIfNull(ref _gameVfx, nameof(GameVfx));
+
         }
         #endregion
     }

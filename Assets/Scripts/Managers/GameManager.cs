@@ -102,7 +102,7 @@ namespace QuantumConnect
             _uiM.UpdateScore(Mode, _scores.P1, _scores.P2);
             _uiM.HideWinAndRetry();
 
-            _gameVfx?.ClearHighlight();
+            _gameVfx?.ClearWinHighlight();
 
             SetState(new SetupState());
         }
@@ -187,7 +187,7 @@ namespace QuantumConnect
                 _scores.Add(placed);
                 _uiM.UpdateScore(Mode, _scores.P1, _scores.P2);
 
-                _gameVfx?.PlayWinFx(winLine);
+                _gameVfx?.PlayWinLine(winLine);
                 _uiM.ShowWin(placed, Mode);
 
                 _gameOver = true;

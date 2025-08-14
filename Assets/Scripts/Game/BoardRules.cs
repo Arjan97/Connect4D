@@ -65,6 +65,18 @@ namespace QuantumConnect
                         if (b.cells[x, y, z] == TokenTypes.None) return true;
             return false;
         }
+        public bool InBounds(BoardModel b, int x, int z)
+            => b != null 
+            && x >= 0 
+            && x < b.sizeX 
+            && z >= 0 
+            && z < b.sizeZ;
+
+        public bool InBounds(BoardModel b, int x, int y, int z)
+            => b != null
+            && x >= 0 && x < b.sizeX
+            && y >= 0 && y < b.sizeY
+            && z >= 0 && z < b.sizeZ;
 
         public List<Vector2Int> GetForkMoves(BoardModel b, List<Vector2Int> valid, TokenTypes t)
         {
