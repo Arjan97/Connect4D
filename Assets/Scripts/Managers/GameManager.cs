@@ -23,7 +23,7 @@ namespace QuantumConnect
         AIManager _aiM;
         UIManager _uiM;
         SessionManager _sessionM;
-        IWinFx _winFx;
+        WinFx _winFx;
         #endregion
 
         #region Services (pure logic)

@@ -5,7 +5,7 @@ using UnityEngine;
 namespace QuantumConnect
 {
     /// <summary>Plays win highlight on the cube.</summary>
-    public class WinFx : MonoBehaviour, IWinFx
+    public class WinFx : MonoBehaviour
     {
         CubeManager _cubeM;
         IAudioService _audio;
