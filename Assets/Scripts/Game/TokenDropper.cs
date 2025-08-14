@@ -14,16 +14,18 @@ namespace QuantumConnect
         readonly GameTuning _tuning;
         readonly CubeManager _cubeM;
         readonly BlackHoleManager _bhM;
+        readonly GameVfx _vfx;
         readonly IAudioService _audio;
         readonly IBoardRules _rules;
 
-        public TokenDropper(CubeManager cube, BlackHoleManager holes, IAudioService audio, IBoardRules rules, GameTuning tuning)
+        public TokenDropper(CubeManager cube, BlackHoleManager holes, IAudioService audio, IBoardRules rules, GameTuning tuning, GameVfx vfx = null)
         {
             _cubeM = cube;
             _bhM = holes;
             _audio = audio;
             _tuning = tuning;
             _rules = rules;
+            _vfx = vfx;
         }
         #endregion
 
@@ -85,7 +87,7 @@ namespace QuantumConnect
                 {
                     int passY = passList[nextPassIndex].y;
                     if (_cubeM.Cells[x, passY, z] != null)
-                        yield return BlinkOnce(x, passY, z, dropSpeed);
+                        yield return _vfx.BlinkCell(x, passY, z, dropSpeed);
                     nextPassIndex++;
                 }
 
@@ -98,7 +100,7 @@ namespace QuantumConnect
                         warped = true;
                         _audio?.PlayWarp();
 
-                        yield return ScaleWarpRoutine(token.transform, token.transform.position);
+                        yield return _vfx.ScaleWarp(token.transform, token.transform.position);
 
                         _bhM.RemoveBlackHole(holeSrc.Value);
 
@@ -173,47 +175,6 @@ namespace QuantumConnect
                     best = s;
             }
             return best;
-        }
-
-        IEnumerator BlinkOnce(int x, int y, int z, float dropSpeed)
-        {
-            float layerTime = _cubeM.CellSpacing.y / dropSpeed;
-            float hold = Mathf.Clamp(layerTime * 0.25f, 0.02f, 0.08f);
-
-            _cubeM.SetCellVisible(x, y, z, false);
-            _audio?.PlayPassThrough();
-
-            yield return new WaitForSeconds(hold);
-
-            _cubeM.SetCellVisible(x, y, z, true);
-        }
-
-        IEnumerator ScaleWarpRoutine(Transform token, Vector3 targetWorldPos, float duration = 0.2f)
-        {
-            Vector3 startScale = token.localScale;
-            float half = duration * 0.5f, t = 0f;
-
-            // Shrink
-            while (t < half)
-            {
-                token.localScale = Vector3.Lerp(startScale, Vector3.zero, t / half);
-                t += Time.deltaTime;
-                yield return null;
-            }
-            token.localScale = Vector3.zero;
-
-            // Teleport to target y
-            token.position = targetWorldPos;
-
-            // Expand
-            t = 0f;
-            while (t < half)
-            {
-                token.localScale = Vector3.Lerp(Vector3.zero, startScale, t / half);
-                t += Time.deltaTime;
-                yield return null;
-            }
-            token.localScale = startScale;
         }
         #endregion
     }

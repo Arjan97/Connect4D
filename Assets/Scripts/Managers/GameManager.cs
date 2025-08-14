@@ -23,7 +23,7 @@ namespace QuantumConnect
         AIManager _aiM;
         UIManager _uiM;
         SessionManager _sessionM;
-        WinFx _winFx;
+        GameVfx _gameVfx;
         #endregion
 
         #region Services (pure logic)
@@ -102,7 +102,7 @@ namespace QuantumConnect
             _uiM.UpdateScore(Mode, _scores.P1, _scores.P2);
             _uiM.HideWinAndRetry();
 
-            _winFx?.ClearHighlight();
+            _gameVfx?.ClearHighlight();
 
             SetState(new SetupState());
         }
@@ -152,7 +152,7 @@ namespace QuantumConnect
             _bhM = central?.BlackHole ?? FindFirstObjectByType<BlackHoleManager>();
             _aiM = central?.AI ?? FindFirstObjectByType<AIManager>();
             _uiM = central?.UI ?? FindFirstObjectByType<UIManager>();
-            _winFx = central?.WinFx ?? FindFirstObjectByType<WinFx>();
+            _gameVfx = central?.GameVfx ?? FindFirstObjectByType<GameVfx>();
         }
 
         bool EnsureDependencies()
@@ -161,7 +161,7 @@ namespace QuantumConnect
             if (_uiM == null) { Debug.LogError("GameManager: UIManager not found in scene."); return false; }
             if (_bhM == null) Debug.LogWarning("GameManager: BlackHoleManager not found (black holes disabled).");
             if (_aiM == null) Debug.LogWarning("GameManager: AIManager not found (AI disabled).");
-            if (_winFx == null) Debug.LogWarning("GameManager: WinFx not found (using basic fallback).");
+            if (_gameVfx == null) Debug.LogWarning("GameManager: WinFx not found (using basic fallback).");
             return true;
         }
 
@@ -172,7 +172,7 @@ namespace QuantumConnect
             _board = new BoardModel(_cubeM.sizeX, _cubeM.sizeY, _cubeM.sizeZ);
             _rules = new BoardRules();
             _tokenFactory = new TokenFactory(_playerOnePrefab, _playerTwoPrefab, _aiPrefab);
-            _dropper = new TokenDropper(_cubeM, _bhM, _audioM, _rules, central?.Tuning);
+            _dropper = new TokenDropper(_cubeM, _bhM, _audioM, _rules, central?.Tuning, central?.GameVfx);
             _turns = new TurnService();
             _scores = new ScoreService();
         }
@@ -187,7 +187,7 @@ namespace QuantumConnect
                 _scores.Add(placed);
                 _uiM.UpdateScore(Mode, _scores.P1, _scores.P2);
 
-                _winFx?.PlayWinFx(winLine);
+                _gameVfx?.PlayWinFx(winLine);
                 _uiM.ShowWin(placed, Mode);
 
                 _gameOver = true;

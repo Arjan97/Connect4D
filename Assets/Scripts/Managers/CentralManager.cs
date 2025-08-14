@@ -27,7 +27,7 @@ namespace QuantumConnect
         [Tooltip("Game tuning parameters, create one if none existent")]
         [SerializeField] GameTuning _tuning;
 
-        WinFx _winFx;
+        GameVfx _gameVfx;
         #endregion
 
         #region Properties
@@ -40,7 +40,7 @@ namespace QuantumConnect
         public AppStateManager App => _appManager;
         public SessionManager Session => _sessionManager;
         public GameTuning Tuning => _tuning;
-        public WinFx WinFx => _winFx;
+        public GameVfx GameVfx => _gameVfx;
 
         public IAudioService Audio => _audioManager;
         #endregion
@@ -83,7 +83,7 @@ namespace QuantumConnect
             FindInSceneIfNull(ref _uiManager, nameof(UIManager));
             FindInSceneIfNull(ref _sessionManager, nameof(SessionManager));
             FindInSceneIfNull(ref _appManager, nameof(AppStateManager));
-            FindInSceneIfNull(ref _winFx, nameof(WinFx)); 
+            FindInSceneIfNull(ref _gameVfx, nameof(GameVfx)); 
         }
         #endregion
     }
