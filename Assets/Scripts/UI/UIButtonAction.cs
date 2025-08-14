@@ -1,6 +1,6 @@
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace QuantumConnect
 {
@@ -24,7 +24,11 @@ namespace QuantumConnect
 
         #region Cached
         Button _button;
-        CentralManager _central;
+        CentralManager _central;   
+        #endregion
+
+        #region Init (optional for tests/DI)
+        public void Initialize(CentralManager central) => _central = central;
         #endregion
 
         #region Unity
@@ -45,39 +49,51 @@ namespace QuantumConnect
         /// <summary>Invoke the configured action.</summary>
         public void Execute()
         {
-            if (ReferenceEquals(_config, null)) { Debug.LogWarning("UIButtonAction missing _config."); return; }
-            if (ReferenceEquals(_central, null)) { Debug.LogWarning("UIButtonAction missing CentralManager."); return; }
+            if (_config == null)
+            {
+                Debug.LogWarning("UIButtonAction: missing ButtonActionConfig.");
+                return;
+            }
+
+            var central = CentralManager.Instance ?? _central;
+            if (central == null)
+            {
+                Debug.LogWarning("UIButtonAction: CentralManager not available.");
+                return;
+            }
 
             switch (_config.action)
             {
                 case ButtonActions.StartGame:
-                    StartGame();
+                    StartGame(central);
                     break;
 
                 case ButtonActions.GoToMenu:
-                    GoToMenu();
+                    GoToMenu(central);
                     break;
 
                 case ButtonActions.ResetMatch:
-                    ResetMatch(_config.keepScores);
+                    ResetMatch(central, _config.keepScores);
                     break;
 
                 case ButtonActions.PlayMenuMusic:
-                    _central.Audio?.PlayMenuMusic();
+                    central.Audio?.PlayMenuMusic();
                     break;
 
                 case ButtonActions.PlayGameMusic:
-                    _central.Audio?.PlayGameMusic();
+                    central.Audio?.PlayGameMusic();
                     break;
 
                 case ButtonActions.StopMusic:
-                    _central.Audio?.StopMusic();
+                    central.Audio?.StopMusic();
                     break;
+
                 case ButtonActions.RotateLeft:
-                    _central.Cube?.RotateLeft();
+                    central.GameVfx?.RotateLeft(central.Cube);
                     break;
+
                 case ButtonActions.RotateRight:
-                    _central.Cube?.RotateRight();
+                    central.GameVfx?.RotateRight(central.Cube);
                     break;
 
                 case ButtonActions.QuitApp:
@@ -92,12 +108,12 @@ namespace QuantumConnect
         #endregion
 
         #region Helpers
-        void StartGame()
+        void StartGame(CentralManager central)
         {
-            var session = _central.Session;
+            var session = central.Session;
             if (session != null) session.SelectedMode = _config.mode;
 
-            _central.Audio?.PlayGameMusic();
+            central.Audio?.PlayGameMusic();
 
             if (!string.IsNullOrEmpty(_config.gameSceneName))
                 SceneManager.LoadScene(_config.gameSceneName);
@@ -105,9 +121,9 @@ namespace QuantumConnect
                 Debug.LogWarning("UIButtonAction: gameSceneName is empty.");
         }
 
-        void GoToMenu()
+        void GoToMenu(CentralManager central)
         {
-            _central.Audio?.PlayMenuMusic();
+            central.Audio?.PlayMenuMusic();
 
             if (!string.IsNullOrEmpty(_config.menuSceneName))
                 SceneManager.LoadScene(_config.menuSceneName);
@@ -115,9 +131,9 @@ namespace QuantumConnect
                 Debug.LogWarning("UIButtonAction: menuSceneName is empty.");
         }
 
-        void ResetMatch(bool keepScores)
+        void ResetMatch(CentralManager central, bool keepScores)
         {
-            var game = _central.Game;
+            var game = central.Game;
             if (game == null)
             {
                 Debug.LogWarning("UIButtonAction.ResetMatch: GameManager not found in this scene.");

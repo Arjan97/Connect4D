@@ -11,7 +11,7 @@ namespace QuantumConnect
     {
         #region Fields
         [Header("Prefabs")]
-        [SerializeField] private GameObject _blackHolePrefab;
+        [SerializeField] GameObject _blackHolePrefab;
         #endregion
 
         #region Properties
@@ -166,7 +166,7 @@ namespace QuantumConnect
         void CreateBlackHoleAt(Vector3Int src)
         {
             if (!IsReadyForSpawn()) return;
-            if (_map.ContainsKey(src)) return; 
+            if (_map.ContainsKey(src)) return;
 
             var candidates = new List<Vector3Int>();
             var cells = _cubeM.Cells;
@@ -215,7 +215,7 @@ namespace QuantumConnect
 
             while (t < dur)
             {
-                if (!tf) yield break; 
+                if (!tf) yield break;
                 tf.localScale = Vector3.LerpUnclamped(Vector3.zero, targetScale, t / dur);
                 t += Time.deltaTime;
                 yield return null;

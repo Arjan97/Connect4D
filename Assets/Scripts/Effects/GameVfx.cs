@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Data;
 using UnityEngine;
 
 namespace QuantumConnect
@@ -120,6 +119,16 @@ namespace QuantumConnect
             }
             token.localScale = startScale;
         }
+
+        public Coroutine RotateLeft(CubeManager cube) => StartCoroutine(RotateBy(cube, Vector3.up, 90f));
+
+        public Coroutine RotateRight(CubeManager cube) => StartCoroutine(RotateBy(cube, Vector3.up, -90f));
+
+        public Coroutine RotateToFace(CubeManager cube, Vector3Int targetFace, Camera cam = null)
+        {
+            return StartCoroutine(RotateToFaceRoutine(cube, targetFace, cam));
+        }
+
         #endregion
         #region Private Helpers
         IEnumerator PlayWinRoutine(List<Vector3Int> winningLine)
@@ -163,7 +172,7 @@ namespace QuantumConnect
 
             var mat = rend.material;
             var winCol = _tuning != null ? _tuning.winHighlight : Color.green;
-            if (winCol.a <= 0f) winCol.a = 0.5f; 
+            if (winCol.a <= 0f) winCol.a = 0.5f;
 
             mat.color = winCol;
 
@@ -174,6 +183,61 @@ namespace QuantumConnect
                 em.a = 1f;
                 mat.SetColor("_EmissionColor", em);
             }
+        }
+        IEnumerator RotateBy(CubeManager cube, Vector3 axis, float angle)
+        {
+            if (cube == null || cube.CubeContainer == null) yield break;
+            float duration = (_tuning != null && _tuning.rotationDuration > 0f) ? _tuning.rotationDuration : 0.2f;
+            yield return AnimateContainerRotation(cube.CubeContainer, axis, angle, duration);
+        }
+
+        IEnumerator RotateToFaceRoutine(CubeManager cube, Vector3Int targetFace, Camera cam)
+        {
+            if (cube == null || cube.CubeContainer == null) yield break;
+
+            int current = FaceUtils.Index(FaceUtils.ActiveFaceNormal(cube.CubeContainer, cam));
+            int target = FaceUtils.Index(targetFace);
+            if (current < 0 || target < 0 || current == target) yield break;
+
+            int diff = (target - current + 4) % 4;
+            float pause = (_tuning != null) ? _tuning.rotationPause : cube.RotationPause;
+            float duration = (_tuning != null && _tuning.rotationDuration > 0f) ? _tuning.rotationDuration : 0.2f;
+
+            if (diff == 1)
+            {
+                yield return AnimateContainerRotation(cube.CubeContainer, Vector3.up, -90f, duration);
+                yield return new WaitForSeconds(pause);
+            }
+            else if (diff == 2)
+            {
+                yield return AnimateContainerRotation(cube.CubeContainer, Vector3.up, -90f, duration);
+                yield return new WaitForSeconds(pause);
+                yield return AnimateContainerRotation(cube.CubeContainer, Vector3.up, -90f, duration);
+                yield return new WaitForSeconds(pause);
+            }
+            else if (diff == 3)
+            {
+                yield return AnimateContainerRotation(cube.CubeContainer, Vector3.up, 90f, duration);
+                yield return new WaitForSeconds(pause);
+            }
+        }
+        IEnumerator AnimateContainerRotation(Transform container, Vector3 axis, float angle, float duration)
+        {
+            if (!container) yield break;
+
+            Vector3 pivot = container.position;
+            float elapsed = 0f;
+            duration = Mathf.Max(duration, 0.0001f);
+
+            while (elapsed < duration)
+            {
+                float step = (angle / duration) * Time.deltaTime;
+                container.RotateAround(pivot, axis, step);
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+
+            container.RotateAround(pivot, axis, angle - (angle / duration) * elapsed);
         }
         #endregion
     }

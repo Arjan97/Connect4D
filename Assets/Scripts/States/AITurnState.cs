@@ -9,8 +9,8 @@ namespace QuantumConnect
         {
             if (!g.Turns.IsAiTurn(g.Mode)) { g.SetState(new PlayerTurnState()); return; }
 
-            g.UpdateTurnUI();   
-            g.RequestAIMove(); 
+            g.UpdateTurnUI();
+            g.RequestAIMove();
         }
 
         public void Exit(GameManager g) { }

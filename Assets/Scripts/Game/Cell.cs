@@ -15,7 +15,7 @@ namespace QuantumConnect
 
         #region Private State
         ICellInteractor _interactorM;
-        GameManager _gameM; 
+        GameManager _gameM;
         #endregion
 
         #region Unity Lifecycle

@@ -1,0 +1,119 @@
+root = true
+
+# -------------------------
+# Core formatting
+# -------------------------
+[.cs]
+charset = utf-8-bom
+end_of_line = crlf
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+
+# Put usings inside namespace (plays nicer with Unity-generated files too)
+csharp_using_directive_placement = inside_namespacesuggestion
+
+# Newline & braces preferences
+csharp_new_line_before_open_brace = all
+csharp_new_line_between_query_expression_clauses = true
+csharp_preserve_single_line_blocks = false
+csharp_preserve_single_line_statements = false
+csharp_prefer_braces = truewarning
+
+# this.qualification
+dotnet_style_qualification_for_field = falsesuggestion
+dotnet_style_qualification_for_property = falsesuggestion
+dotnet_style_qualification_for_method = falsesuggestion
+dotnet_style_qualification_for_event = falsesuggestion
+
+# var usage
+csharp_style_var_for_built_in_types = truesuggestion
+csharp_style_var_when_type_is_apparent = truesuggestion
+csharp_style_var_elsewhere = falsesuggestion
+
+# expression-bodied members (keep reasonable)
+csharp_style_expression_bodied_methods = when_on_single_linesuggestion
+csharp_style_expression_bodied_properties = when_on_single_linesuggestion
+csharp_style_expression_bodied_accessors = when_on_single_linesuggestion
+
+# pattern matching  modern C#
+csharp_style_prefer_switch_expression = truesuggestion
+csharp_style_prefer_pattern_matching = truesuggestion
+csharp_style_pattern_local_over_anonymous_function = truesuggestion
+dotnet_style_prefer_is_null_check_over_reference_equality_method = truesuggestion
+dotnet_style_null_propagation = truesuggestion
+dotnet_style_coalesce_expression = truesuggestion
+
+# fields & properties
+dotnet_style_readonly_field = truesuggestion
+dotnet_style_prefer_auto_properties = truesuggestion
+dotnet_style_require_accessibility_modifiers = for_non_interface_memberssuggestion
+
+# -------------------------
+# Naming rules
+# -------------------------
+
+# Symbols
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_symbols.private_fields.required_modifiers =
+
+dotnet_naming_symbols.constants.applicable_kinds = field
+dotnet_naming_symbols.constants.applicable_accessibilities = 
+dotnet_naming_symbols.constants.required_modifiers = const
+
+dotnet_naming_symbols.public_members.applicable_kinds = property,method,field,event
+dotnet_naming_symbols.public_members.applicable_accessibilities = public, protected, protected_internal
+
+dotnet_naming_symbols.interfaces.applicable_kinds = interface
+dotnet_naming_symbols.interfaces.applicable_accessibilities = 
+
+dotnet_naming_symbols.type_parameters.applicable_kinds = type_parameter
+dotnet_naming_symbols.type_parameters.applicable_accessibilities = 
+
+dotnet_naming_symbols.async_methods.applicable_kinds = method
+dotnet_naming_symbols.async_methods.applicable_accessibilities = 
+dotnet_naming_symbols.async_methods.required_modifiers =
+
+# Styles
+dotnet_naming_style.private_underscore.capitalization = camel_case
+dotnet_naming_style.private_underscore.required_prefix = _
+dotnet_naming_style.private_underscore.required_suffix =
+
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+dotnet_naming_style.interface_prefixed.capitalization = pascal_case
+dotnet_naming_style.interface_prefixed.required_prefix = I
+
+dotnet_naming_style.typeparam_prefixed.capitalization = pascal_case
+dotnet_naming_style.typeparam_prefixed.required_prefix = T
+
+dotnet_naming_style.async_suffix.capitalization = pascal_case
+dotnet_naming_style.async_suffix.required_suffix = Async
+
+# Rules
+dotnet_naming_rule.private_fields_should_have_underscore.severity = suggestion
+dotnet_naming_rule.private_fields_should_have_underscore.symbols = private_fields
+dotnet_naming_rule.private_fields_should_have_underscore.style = private_underscore
+
+dotnet_naming_rule.constants_should_be_pascal.severity = suggestion
+dotnet_naming_rule.constants_should_be_pascal.symbols = constants
+dotnet_naming_rule.constants_should_be_pascal.style = pascal_case
+# (if you want ALL_CAPS constants, tell me and I’ll switch this)
+
+dotnet_naming_rule.public_members_pascal.severity = suggestion
+dotnet_naming_rule.public_members_pascal.symbols = public_members
+dotnet_naming_rule.public_members_pascal.style = pascal_case
+
+dotnet_naming_rule.interfaces_should_be_prefixed.severity = suggestion
+dotnet_naming_rule.interfaces_should_be_prefixed.symbols = interfaces
+dotnet_naming_rule.interfaces_should_be_prefixed.style = interface_prefixed
+
+dotnet_naming_rule.type_parameters_prefixed.severity = suggestion
+dotnet_naming_rule.type_parameters_prefixed.symbols = type_parameters
+dotnet_naming_rule.type_parameters_prefixed.style = typeparam_prefixed
+
+dotnet_naming_rule.async_methods_should_have_suffix.severity = suggestion
+dotnet_naming_rule.async_methods_should_have_suffix.symbols = async_methods
+dotnet_naming_rule.async_methods_should_have_suffix.style = async_suffix

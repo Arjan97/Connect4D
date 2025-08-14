@@ -4,49 +4,49 @@ using UnityEngine;
 namespace QuantumConnect
 {
     /// <summary>
-    /// AI coordinator: evaluates the board and instructs CubeManager to rotate and drop.
+    /// AI coordinator.
     /// </summary>
     public class AIManager : MonoBehaviour
     {
+        #region Dependencies
+        // Deps
         GameManager _gameM;
         CubeManager _cubeM;
         GameTuning _tuning;
+        IGameVfx _vfx;
 
+        // Tuning cache
         int _maxDepth;
         float _moveDelay;
         float _rotationChance;
-
+        #endregion
         static readonly Vector3Int[] _faces = { Face.Right, Face.Left, Face.Front, Face.Back };
-
-        void Awake()
-        {
-            ApplyTuning();
-        }
-
-        void OnEnable()
-        {
-            ApplyTuning();
-        }
-
-        void ApplyTuning()
-        {
-            _maxDepth = _tuning != null ? _tuning.aiMaxDepth : 4;
-            _moveDelay = _tuning != null ? _tuning.aiMoveDelay : 0.7f;
-            _rotationChance = _tuning != null ? _tuning.aiRotationChance : 0.3f;
-        }
-        public void Initialize(GameManager game, CubeManager cube, GameTuning tuning)
+        #region Unity
+        void Awake() => ApplyTuning();
+        void OnEnable() => ApplyTuning();
+        #endregion
+        #region Public API
+        public void Initialize(GameManager game, CubeManager cube, GameTuning tuning, IGameVfx vfx = null)
         {
             _gameM = game;
             _cubeM = cube;
             _tuning = tuning;
+            _vfx = vfx;
             ApplyTuning();
         }
 
         public void MakeMove()
         {
-            if (!_gameM.Turns.IsAiTurn(_gameM.Mode)) return;
-
+            if (_gameM == null || !_gameM.Turns.IsAiTurn(_gameM.Mode)) return;
             StartCoroutine(MakeMoveRoutine());
+        }
+        #endregion
+        #region Private API
+        void ApplyTuning()
+        {
+            _maxDepth = _tuning != null ? _tuning.aiMaxDepth : 4;
+            _moveDelay = _tuning != null ? _tuning.aiMoveDelay : 0.7f;
+            _rotationChance = _tuning != null ? _tuning.aiRotationChance : 0.3f;
         }
 
         IEnumerator MakeMoveRoutine()
@@ -57,28 +57,29 @@ namespace QuantumConnect
             var board = _gameM.Board;
             var rules = _gameM.Rules;
 
-            // Try to win immediately.
+            // Win
             if (TryFindImmediateMove(TokenTypes.PlayerTwo, out var winMove, out var winFace))
             {
                 yield return ExecuteMove(winFace, winMove.x, winMove.y);
                 yield break;
             }
 
-            // Block opponent’s immediate win.
+            // Block
             if (TryFindImmediateMove(TokenTypes.PlayerOne, out var blockMove, out var blockFace))
             {
                 yield return ExecuteMove(blockFace, blockMove.x, blockMove.y);
                 yield break;
             }
 
-            // Create a fork if possible (face-aware).
-            var currentFace = _cubeM.GetActiveFaceNormal();
+            // Fork
+            var currentFace = FaceUtils.ActiveFaceNormal(_cubeM.CubeContainer, Camera.main);
             var currentMoves = _cubeM.CollectMovesOnFace(board, currentFace);
             var forks = rules.GetForkMoves(board, currentMoves, TokenTypes.PlayerTwo);
             if (forks.Count > 0)
             {
                 var choice = forks[Random.Range(0, forks.Count)];
-                var faceForChoice = _cubeM.DetermineFaceForDrop(board, choice.x, choice.y);
+                int dropY = board.GetDropY(choice.x, choice.y);
+                var faceForChoice = FaceUtils.DetermineFaceForDrop(choice.x, dropY, choice.y, _cubeM.sizeX, _cubeM.sizeZ);
                 yield return ExecuteMove(faceForChoice, choice.x, choice.y);
                 yield break;
             }
@@ -101,7 +102,7 @@ namespace QuantumConnect
                 yield break;
             }
 
-            // Minimax pick.
+            // Minimax
             Vector2Int bestMove = new(-1, -1);
             int bestScore = int.MinValue;
 
@@ -125,7 +126,8 @@ namespace QuantumConnect
             if (bestMove.x < 0 || bestMove.y < 0)
                 bestMove = candidates[Random.Range(0, candidates.Count)];
 
-            var faceForBest = _cubeM.DetermineFaceForDrop(board, bestMove.x, bestMove.y);
+            int bestDropY = board.GetDropY(bestMove.x, bestMove.y);
+            var faceForBest = FaceUtils.DetermineFaceForDrop(bestMove.x, bestDropY, bestMove.y, _cubeM.sizeX, _cubeM.sizeZ);
             yield return ExecuteMove(faceForBest, bestMove.x, bestMove.y);
         }
 
@@ -163,9 +165,9 @@ namespace QuantumConnect
                 for (int i = 0; i < moves.Count; i++)
                 {
                     var m = moves[i];
-                    rules.ApplyMove(board,m.x, m.y, TokenTypes.PlayerTwo);
+                    rules.ApplyMove(board, m.x, m.y, TokenTypes.PlayerTwo);
                     int val = Minimax(depth - 1, false);
-                    rules.UndoMove(board,m.x, m.y);
+                    rules.UndoMove(board, m.x, m.y);
                     if (val > best) best = val;
                 }
                 return best;
@@ -208,8 +210,10 @@ namespace QuantumConnect
 
         IEnumerator ExecuteMove(Vector3Int face, int x, int z)
         {
-            yield return _cubeM.RotateToFace(face);
-            yield return new WaitForSeconds(_cubeM.RotationPause);
+            _vfx?.RotateToFace(_cubeM, face);
+            float rotateDur = (_tuning != null && _tuning.rotationDuration > 0f) ? _tuning.rotationDuration : 0.2f;
+            float rotatePause = (_tuning != null) ? _tuning.rotationPause : _cubeM.RotationPause;
+            yield return new WaitForSeconds(rotateDur + rotatePause);
 
             _gameM.StartCoroutine(_gameM.DropToken(x, z));
             _gameM.SetState(new ResolvingState());
@@ -217,8 +221,10 @@ namespace QuantumConnect
 
         IEnumerator RotateOnly(Vector3Int face)
         {
-            yield return _cubeM.RotateToFace(face);
-            yield return new WaitForSeconds(_cubeM.RotationPause);
+            _vfx?.RotateToFace(_cubeM, face);
+            float rotateDur = (_tuning != null && _tuning.rotationDuration > 0f) ? _tuning.rotationDuration : 0.2f;
+            float rotatePause = (_tuning != null) ? _tuning.rotationPause : _cubeM.RotationPause;
+            yield return new WaitForSeconds(rotateDur + rotatePause);
         }
 
         Vector3Int PickDifferentFace(Vector3Int current)
@@ -239,5 +245,6 @@ namespace QuantumConnect
             }
             return Vector3Int.zero;
         }
+        #endregion
     }
 }

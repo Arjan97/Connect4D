@@ -3,7 +3,7 @@ namespace QuantumConnect
     public class TurnService
     {
         public int Current { get; private set; }
-        public void Reset() => Current = 0;     
+        public void Reset() => Current = 0;
         public void Next() => Current = 1 - Current;
 
         public bool IsAiTurn(GameModes mode) =>

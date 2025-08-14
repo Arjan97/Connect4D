@@ -14,7 +14,7 @@ namespace QuantumConnect
         readonly GameTuning _tuning;
         readonly CubeManager _cubeM;
         readonly BlackHoleManager _bhM;
-        readonly IGameVfx _vfx;         
+        readonly IGameVfx _vfx;
         readonly IAudioService _audio;
         readonly IBoardRules _rules;
         #endregion

@@ -66,10 +66,10 @@ namespace QuantumConnect
             return false;
         }
         public bool InBounds(BoardModel b, int x, int z)
-            => b != null 
-            && x >= 0 
-            && x < b.sizeX 
-            && z >= 0 
+            => b != null
+            && x >= 0
+            && x < b.sizeX
+            && z >= 0
             && z < b.sizeZ;
 
         public bool InBounds(BoardModel b, int x, int y, int z)

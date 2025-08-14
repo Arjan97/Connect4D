@@ -5,7 +5,7 @@ using UnityEngine;
 namespace QuantumConnect
 {
     /// Centralized audio: pooled SFX + background music with crossfade (menu/game).
-    public class AudioManager : MonoBehaviour, IAudioService
+    public class AudioService : MonoBehaviour, IAudioService
     {
         [Header("SFX Clips")]
         [SerializeField] AudioClip _passThroughSFX;
@@ -139,7 +139,7 @@ namespace QuantumConnect
 
         IEnumerator CrossfadeRoutine(AudioSource from, AudioSource to, float duration, float targetVol)
         {
-            if (to == null) yield break; 
+            if (to == null) yield break;
             if (duration <= 0f)
             {
                 if (from != null && from.isPlaying) from.Stop();

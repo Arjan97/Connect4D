@@ -174,11 +174,11 @@ namespace QuantumConnect
         void InitServices()
         {
             var central = CentralManager.Instance;
-            var services = central.BuildGameServices();   
+            var services = central.BuildGameServices();
 
             // Model & logic
             _board = new BoardModel(_cubeM.sizeX, _cubeM.sizeY, _cubeM.sizeZ);
-            _rules = central.Rules; 
+            _rules = central.Rules;
             _turns = new TurnService();
             _scores = new ScoreService();
             _tokenFactory = new TokenFactory(_playerOnePrefab, _playerTwoPrefab, _aiPrefab);
@@ -186,7 +186,7 @@ namespace QuantumConnect
             // Inject deps
             _dropper = new TokenDropper(services);
             _gameVfx?.Initialize(services, _board);
-            _bhM?.Initialize(this, _cubeM, central?.Audio, central?.Tuning);        
+            _bhM?.Initialize(this, _cubeM, central?.Audio, central?.Tuning);
             _aiM?.Initialize(this, _cubeM, central?.Tuning);
             _appM?.Initialize(central?.Audio);
             _cubeM.Initialize(CentralManager.Instance?.Tuning, respawn: true);

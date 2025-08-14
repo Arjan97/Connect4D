@@ -16,5 +16,9 @@ namespace QuantumConnect
         // Win highlight passthrough.
         Coroutine PlayWinLine(List<Vector3Int> winningLine);
         void ClearWinHighlight();
+
+        Coroutine RotateToFace(CubeManager cube, Vector3Int face, Camera cam = null);
+        Coroutine RotateLeft(CubeManager cube);
+        Coroutine RotateRight(CubeManager cube);
     }
 }

@@ -17,7 +17,7 @@ namespace QuantumConnect
         [Header("Core")]
         [SerializeField] GameManager _gameManager;
         [SerializeField] CubeManager _cubeManager;
-        [SerializeField] AudioManager _audioManager;
+        [SerializeField] AudioService _audioManager;
         [SerializeField] AIManager _aiManager;
         [SerializeField] InputManager _inputManager;
         [SerializeField] BlackHoleManager _blackHoleManager;
@@ -57,7 +57,7 @@ namespace QuantumConnect
                 _audioManager,
                 Rules,
                 _tuning,
-                _gameVfx   
+                _gameVfx
             );
         }
         #endregion
@@ -94,7 +94,7 @@ namespace QuantumConnect
         {
             FindInSceneIfNull(ref _gameManager, nameof(GameManager));
             FindInSceneIfNull(ref _cubeManager, nameof(CubeManager));
-            FindInSceneIfNull(ref _audioManager, nameof(AudioManager));
+            FindInSceneIfNull(ref _audioManager, nameof(AudioService));
             FindInSceneIfNull(ref _aiManager, nameof(AIManager));
             FindInSceneIfNull(ref _inputManager, nameof(InputManager));
             FindInSceneIfNull(ref _blackHoleManager, nameof(BlackHoleManager));

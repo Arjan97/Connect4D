@@ -55,7 +55,7 @@ namespace QuantumConnect
 
         public void GoToMenu() => SetState(AppStates.Menu);
         public void StartGame() => SetState(AppStates.Game);
-    
+
         void OnEnable() { SceneManager.sceneLoaded += OnSceneLoaded; }
         void OnDisable() { SceneManager.sceneLoaded -= OnSceneLoaded; }
 
