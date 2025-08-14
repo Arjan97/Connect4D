@@ -30,7 +30,7 @@ namespace QuantumConnect
             _current = next;
 
             var central = CentralManager.Instance;
-            var music = central?.Music;
+            var music = central?.Audio;
 
             switch (_current)
             {
@@ -56,7 +56,7 @@ namespace QuantumConnect
 
         void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            var music = CentralManager.Instance?.Music;
+            var music = CentralManager.Instance?.Audio;
             if (music == null) return;
 
             if (scene.name == _menuSceneName) music.PlayMenuMusic();

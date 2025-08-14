@@ -22,7 +22,7 @@ namespace QuantumConnect
         #region Private State
         GameManager _gameM;
         CubeManager _cubeM;
-        IAudioPlayer _audioM;
+        IAudioService _audioM;
         GameTuning _tuning;
 
         readonly Dictionary<Vector3Int, BlackHoleData> _map = new Dictionary<Vector3Int, BlackHoleData>();

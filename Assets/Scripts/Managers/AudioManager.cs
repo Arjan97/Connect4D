@@ -5,7 +5,7 @@ using UnityEngine;
 namespace QuantumConnect
 {
     /// Centralized audio: pooled SFX + background music with crossfade (menu/game).
-    public class AudioManager : MonoBehaviour, IAudioPlayer, IMusicPlayer
+    public class AudioManager : MonoBehaviour, IAudioService
     {
         [Header("SFX Clips")]
         [SerializeField] AudioClip _passThroughSFX;

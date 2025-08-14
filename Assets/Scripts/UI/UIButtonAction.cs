@@ -63,15 +63,15 @@ namespace QuantumConnect
                     break;
 
                 case ButtonActions.PlayMenuMusic:
-                    _central.Music?.PlayMenuMusic();
+                    _central.Audio?.PlayMenuMusic();
                     break;
 
                 case ButtonActions.PlayGameMusic:
-                    _central.Music?.PlayGameMusic();
+                    _central.Audio?.PlayGameMusic();
                     break;
 
                 case ButtonActions.StopMusic:
-                    _central.Music?.StopMusic();
+                    _central.Audio?.StopMusic();
                     break;
                 case ButtonActions.RotateLeft:
                     _central.Cube?.RotateLeft();
@@ -97,7 +97,7 @@ namespace QuantumConnect
             var session = _central.Session;
             if (session != null) session.SelectedMode = _config.mode;
 
-            _central.Music?.PlayGameMusic();
+            _central.Audio?.PlayGameMusic();
 
             if (!string.IsNullOrEmpty(_config.gameSceneName))
                 SceneManager.LoadScene(_config.gameSceneName);
@@ -107,7 +107,7 @@ namespace QuantumConnect
 
         void GoToMenu()
         {
-            _central.Music?.PlayMenuMusic();
+            _central.Audio?.PlayMenuMusic();
 
             if (!string.IsNullOrEmpty(_config.menuSceneName))
                 SceneManager.LoadScene(_config.menuSceneName);

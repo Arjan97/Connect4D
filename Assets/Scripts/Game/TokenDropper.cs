@@ -14,9 +14,9 @@ namespace QuantumConnect
         readonly GameTuning _tuning;
         readonly CubeManager _cubeM;
         readonly BlackHoleManager _bhM;
-        readonly IAudioPlayer _audio;
+        readonly IAudioService _audio;
 
-        public TokenDropper(CubeManager cube, BlackHoleManager holes, IAudioPlayer audio, GameTuning tuning)
+        public TokenDropper(CubeManager cube, BlackHoleManager holes, IAudioService audio, GameTuning tuning)
         {
             _cubeM = cube;
             _bhM = holes;

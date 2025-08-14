@@ -42,8 +42,7 @@ namespace QuantumConnect
         public GameTuning Tuning => _tuning;
         public WinFx WinFx => _winFx;
 
-        public IAudioPlayer Audio => _audioManager;
-        public IMusicPlayer Music => _audioManager;
+        public IAudioService Audio => _audioManager;
         #endregion
 
         #region Unity Lifecycle

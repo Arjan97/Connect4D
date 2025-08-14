@@ -19,7 +19,7 @@ namespace QuantumConnect
         #region Dependencies (scene singletons)
         CubeManager _cubeM;
         BlackHoleManager _bhM;
-        IAudioPlayer _audioM;
+        IAudioService _audioM;
         AIManager _aiM;
         UIManager _uiM;
         SessionManager _sessionM;

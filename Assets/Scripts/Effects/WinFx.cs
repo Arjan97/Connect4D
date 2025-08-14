@@ -8,7 +8,7 @@ namespace QuantumConnect
     public class WinFx : MonoBehaviour, IWinFx
     {
         CubeManager _cubeM;
-        IAudioPlayer _audio;
+        IAudioService _audio;
         GameTuning _tuning;
         struct RendBackup
         {
