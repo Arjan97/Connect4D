@@ -46,9 +46,10 @@ namespace QuantumConnect
         #endregion
 
         #region Unity
-        void Start()
+        void Awake()
         {
             EnsureMusicBusses();
+            if (audioPool == null) audioPool = FindFirstObjectByType<AudioPool>();
         }
         #endregion
 
@@ -133,7 +134,8 @@ namespace QuantumConnect
         void PlayMusic(AudioClip clip)
         {
             if (!clip) return;
-
+            if (activeMusic && activeMusic.clip == clip && activeMusic.isPlaying && activeMusic.volume > 0.0f)
+                return;
             var from = activeMusic;
             var to = (activeMusic == musicA ? musicB : musicA);
 
@@ -145,19 +147,6 @@ namespace QuantumConnect
             if (crossfade != null) StopCoroutine(crossfade);
             crossfade = StartCoroutine(Crossfade(from, to, Mathf.Max(0.001f, crossfadeSeconds), musicVolume));
             activeMusic = to;
-        }
-
-        void EnsureMusic(AudioClip target)
-        {
-            if (!target) return;
-
-            if (activeMusic && activeMusic.clip == target && activeMusic.isPlaying)
-            {
-                activeMusic.volume = musicVolume;
-                return;
-            }
-
-            PlayMusic(target);
         }
 
         IEnumerator Crossfade(AudioSource from, AudioSource to, float duration, float targetVol)

@@ -18,10 +18,40 @@ namespace QuantumConnect
         AppStates _current;
         IAudioService _audio;
 
+        void Awake()
+        {
+            RebindAudio();
+        }
+
+        void OnEnable()
+        {
+            SceneManager.sceneLoaded += OnSceneLoaded;
+
+            var central = CentralManager.Instance;
+            if (central != null)
+                central.SceneRefsUpdated += RebindAudio;
+        }
+
+        void OnDisable()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+
+            var central = CentralManager.Instance;
+            if (central != null)
+                central.SceneRefsUpdated -= RebindAudio;
+        }
+
         void Start()
         {
+            if (_audio == null) RebindAudio();
+
+            var active = SceneManager.GetActiveScene().name;
+            if (active == _menuSceneName) _audio?.PlayMenuMusic();
+            else if (active == _gameSceneName) _audio?.PlayGameMusic();
+
             SetState(_initialState);
         }
+
         public void Initialize(IAudioService audio)
         {
             _audio = audio;
@@ -36,27 +66,40 @@ namespace QuantumConnect
             {
                 case AppStates.Menu:
                     if (SceneManager.GetActiveScene().name != _menuSceneName)
-                        SceneManager.LoadScene(_menuSceneName);
-                    _audio?.PlayMenuMusic();
+                    {
+                        SceneManager.LoadScene(_menuSceneName); 
+                    }
+                    else
+                    {
+                        _audio?.PlayMenuMusic(); 
+                    }
                     break;
 
                 case AppStates.Game:
                     if (SceneManager.GetActiveScene().name != _gameSceneName)
+                    {
                         SceneManager.LoadScene(_gameSceneName);
-                    _audio?.PlayGameMusic();
+                    }
+                    else
+                    {
+                        _audio?.PlayGameMusic();
+                    }
                     break;
             }
         }
 
-        void OnEnable() { SceneManager.sceneLoaded += OnSceneLoaded; }
-        void OnDisable() { SceneManager.sceneLoaded -= OnSceneLoaded; }
-
         void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
+            if (_audio == null) RebindAudio();
             if (_audio == null) return;
 
             if (scene.name == _menuSceneName) _audio.PlayMenuMusic();
             else if (scene.name == _gameSceneName) _audio.PlayGameMusic();
+        }
+
+        void RebindAudio()
+        {
+            _audio = CentralManager.Instance?.Audio;
         }
     }
 }
