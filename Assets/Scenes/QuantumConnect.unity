@@ -1992,6 +1992,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 24152901}
     m_Modifications:
+    - target: {fileID: 3343119721848770395, guid: 0e07fc58043bf1b4e80950462a62e711, type: 3}
+      propertyPath: _blackHolePrefab
+      value: 
+      objectReference: {fileID: 3730326204984019531, guid: d7cf121311c80fd4a94dabc1960043a5, type: 3}
     - target: {fileID: 4102248924759339561, guid: 0e07fc58043bf1b4e80950462a62e711, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0

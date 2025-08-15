@@ -17,7 +17,7 @@ namespace QuantumConnect
         [Header("Core")]
         [SerializeField] GameManager _gameManager;
         [SerializeField] CubeManager _cubeManager;
-        [SerializeField] AudioService _audioManager;
+        [SerializeField] AudioService _audioService;
         [SerializeField] AIManager _aiManager;
         [SerializeField] InputManager _inputManager;
         [SerializeField] BlackHoleManager _blackHoleManager;
@@ -55,14 +55,14 @@ namespace QuantumConnect
         public TokenPool TokenPool => _tokenPool;
 
         public IBoardRules Rules => _boardRules ??= new BoardRules();
-        public IAudioService Audio => _audioManager;
+        public IAudioService Audio => _audioService;
 
         public GameServices BuildGameServices()
         {
             return new GameServices(
                 _cubeManager,
                 _blackHoleManager,
-                _audioManager,
+                _audioService,
                 Rules,
                 _tuning,
                 _gameVfx
@@ -107,7 +107,7 @@ namespace QuantumConnect
         {
             FindInSceneIfNull(ref _gameManager, nameof(GameManager));
             FindInSceneIfNull(ref _cubeManager, nameof(CubeManager));
-            FindInSceneIfNull(ref _audioManager, nameof(AudioService));
+            FindInSceneIfNull(ref _audioService, nameof(AudioService));
             FindInSceneIfNull(ref _aiManager, nameof(AIManager));
             FindInSceneIfNull(ref _inputManager, nameof(InputManager));
             FindInSceneIfNull(ref _blackHoleManager, nameof(BlackHoleManager));
@@ -115,25 +115,16 @@ namespace QuantumConnect
             FindInSceneIfNull(ref _sessionManager, nameof(SessionManager));
             FindInSceneIfNull(ref _appManager, nameof(AppStateManager));
             FindInSceneIfNull(ref _gameVfx, nameof(GameVfx));
-
             FindInSceneIfNull(ref _audioPool, nameof(AudioPool));
             FindInSceneIfNull(ref _tokenPool, nameof(TokenPool));
-
-            var audioPool = FindFirstObjectByType<AudioPool>();
-            if (_audioManager && audioPool) _audioManager.SetPool(audioPool);
-            if (_audioManager)
-            {
-                if (_gameManager != null) _audioManager.EnsureGameMusic();
-                else _audioManager.EnsureMenuMusic();                     
-            }
 
             SceneRefsUpdated?.Invoke();
         }
 
         void WireUpPools()
         {
-            if (_audioManager != null && _audioPool != null)
-                _audioManager.SetPool(_audioPool);
+            if (_audioService != null && _audioPool != null)
+                _audioService.SetPool(_audioPool);
         }
         #endregion
     }

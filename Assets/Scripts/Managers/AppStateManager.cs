@@ -18,8 +18,6 @@ namespace QuantumConnect
         AppStates _current;
         IAudioService _audio;
 
-        public AppStates Current => _current;
-
         void Start()
         {
             SetState(_initialState);
@@ -33,9 +31,6 @@ namespace QuantumConnect
         {
             if (_current == next) return;
             _current = next;
-
-            var central = CentralManager.Instance;
-            var music = central?.Audio;
 
             switch (_current)
             {
@@ -52,9 +47,6 @@ namespace QuantumConnect
                     break;
             }
         }
-
-        public void GoToMenu() => SetState(AppStates.Menu);
-        public void StartGame() => SetState(AppStates.Game);
 
         void OnEnable() { SceneManager.sceneLoaded += OnSceneLoaded; }
         void OnDisable() { SceneManager.sceneLoaded -= OnSceneLoaded; }

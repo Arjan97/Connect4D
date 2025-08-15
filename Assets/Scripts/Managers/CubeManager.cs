@@ -42,7 +42,7 @@ namespace QuantumConnect
         }
         #endregion
 
-        #region DI Init
+        #region Init
         /// <summary>Apply tuning values and (optionally) rebuild the grid.</summary>
         public void Initialize(GameTuning tuning, bool respawn = true)
         {

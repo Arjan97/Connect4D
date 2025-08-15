@@ -52,7 +52,7 @@ namespace QuantumConnect
         }
         #endregion
 
-        #region DI
+        #region Init
         public void SetPool(AudioPool pool) { audioPool = pool; }
         #endregion
 
@@ -115,17 +115,6 @@ namespace QuantumConnect
         {
             musicVolume = Mathf.Clamp01(v);
             if (crossfade == null && activeMusic) activeMusic.volume = musicVolume;
-        }
-        public void EnsureMenuMusic()
-        {
-            EnsureMusicBusses();
-            EnsureMusic(menuMusic);
-        }
-
-        public void EnsureGameMusic()
-        {
-            EnsureMusicBusses();
-            EnsureMusic(gameMusic);
         }
         #endregion
 

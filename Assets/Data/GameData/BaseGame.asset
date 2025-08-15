@@ -16,7 +16,7 @@ MonoBehaviour:
   sizeY: 4
   sizeZ: 4
   startPosition: {x: 0, y: 0.6, z: 0}
-  cellSpacing: {x: 1.3, y: 1.3, z: 1.3}
+  cellSpacing: {x: 1.2, y: 1.2, z: 1.2}
   rotationDuration: 0.2
   rotationPause: 0.2
   dropHeight: 2
