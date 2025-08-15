@@ -2,10 +2,11 @@ using UnityEngine;
 
 namespace QuantumConnect
 {
-    /// <summary>Chooses token assets per game mode and player, and applies visuals.</summary>
+    /// <summary>Creates and styles tokens (pooled).</summary>
     public interface ITokenFactory
     {
         GameObject PickPrefab(GameModes mode, int currentPlayer);
+        GameObject SpawnToken(GameObject prefab, Transform parent, Vector3 position, Quaternion rotation);
         void PostSpawnVisual(GameModes mode, int currentPlayer, GameObject token, Material aiTwoMaterial);
     }
 }

@@ -8,7 +8,7 @@ namespace QuantumConnect
     /// Single point of access to game services/components.
     /// Wire references in the Inspector or via FindInScene() on Awake as fallback.
     /// </summary>
-    [DefaultExecutionOrder(-1000)] // Ensure this runs before most other scripts
+    [DefaultExecutionOrder(-1000)]
     public class CentralManager : MonoBehaviour
     {
         public static CentralManager Instance { get; private set; }
@@ -25,6 +25,10 @@ namespace QuantumConnect
         [SerializeField] AppStateManager _appManager;
         [SerializeField] SessionManager _sessionManager;
         [SerializeField] BoardRules _boardRules;
+
+        [Header("Pools")]
+        [SerializeField] AudioPool _audioPool;
+        [SerializeField] TokenPool _tokenPool;
 
         [Header("Scriptable Object")]
         [Tooltip("Game tuning parameters, create one if none existent")]
@@ -47,8 +51,12 @@ namespace QuantumConnect
         public GameTuning Tuning => _tuning;
         public GameVfx GameVfx => _gameVfx;
 
+        public AudioPool AudioPool => _audioPool;
+        public TokenPool TokenPool => _tokenPool;
+
         public IBoardRules Rules => _boardRules ??= new BoardRules();
         public IAudioService Audio => _audioManager;
+
         public GameServices BuildGameServices()
         {
             return new GameServices(
@@ -63,7 +71,6 @@ namespace QuantumConnect
         #endregion
 
         #region Unity Lifecycle
-
         void Awake()
         {
             if (Instance != null && Instance != this)
@@ -76,6 +83,16 @@ namespace QuantumConnect
 
             if (_boardRules == null) _boardRules = new BoardRules();
             BindSceneLocals();
+            WireUpPools();
+        }
+
+        void OnEnable() => SceneManager.sceneLoaded += OnSceneLoaded;
+        void OnDisable() => SceneManager.sceneLoaded -= OnSceneLoaded;
+
+        void OnSceneLoaded(Scene s, LoadSceneMode m)
+        {
+            BindSceneLocals();
+            WireUpPools();
         }
         #endregion
 
@@ -85,10 +102,6 @@ namespace QuantumConnect
             if (field == null)
                 field = FindFirstObjectByType<T>();
         }
-        void OnEnable() => SceneManager.sceneLoaded += OnSceneLoaded;
-        void OnDisable() => SceneManager.sceneLoaded -= OnSceneLoaded;
-
-        void OnSceneLoaded(Scene s, LoadSceneMode m) { BindSceneLocals(); }
 
         void BindSceneLocals()
         {
@@ -102,7 +115,25 @@ namespace QuantumConnect
             FindInSceneIfNull(ref _sessionManager, nameof(SessionManager));
             FindInSceneIfNull(ref _appManager, nameof(AppStateManager));
             FindInSceneIfNull(ref _gameVfx, nameof(GameVfx));
+
+            FindInSceneIfNull(ref _audioPool, nameof(AudioPool));
+            FindInSceneIfNull(ref _tokenPool, nameof(TokenPool));
+
+            var audioPool = FindFirstObjectByType<AudioPool>();
+            if (_audioManager && audioPool) _audioManager.SetPool(audioPool);
+            if (_audioManager)
+            {
+                if (_gameManager != null) _audioManager.EnsureGameMusic();
+                else _audioManager.EnsureMenuMusic();                     
+            }
+
             SceneRefsUpdated?.Invoke();
+        }
+
+        void WireUpPools()
+        {
+            if (_audioManager != null && _audioPool != null)
+                _audioManager.SetPool(_audioPool);
         }
         #endregion
     }

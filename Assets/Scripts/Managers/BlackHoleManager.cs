@@ -180,8 +180,8 @@ namespace QuantumConnect
                 cells[src.x, src.y, src.z] = null;
             }
 
-            var center = CubeManager.CenterOffset(_cubeM.sizeX, _cubeM.sizeY, _cubeM.sizeZ, _cubeM.CellSpacing);
-            var localPos = CubeManager.LocalFromIndices(src.x, src.y, src.z, _cubeM.CellSpacing, center);
+            var center = GridUtils.CenterOffset(_cubeM.sizeX, _cubeM.sizeY, _cubeM.sizeZ, _cubeM.CellSpacing);
+            var localPos = GridUtils.LocalFromIndices(src.x, src.y, src.z, _cubeM.CellSpacing, center);
 
             var bhGO = Instantiate(_blackHolePrefab, _cubeM.CubeContainer);
             bhGO.transform.localPosition = localPos;
@@ -192,7 +192,7 @@ namespace QuantumConnect
             cells[src.x, src.y, src.z] = cellComp;
 
             StartCoroutine(WarpInBlackHole(bhGO.transform));
-            _audioM?.PlayWarp();
+            _audioM?.PlayWarpAt(bhGO.transform.position);
 
             _map[src] = new BlackHoleData { Destination = dst, Instance = bhGO };
         }
@@ -202,8 +202,8 @@ namespace QuantumConnect
             var existing = _cubeM.Cells[coord.x, coord.y, coord.z];
             if (existing != null && existing.gameObject != null) return; 
 
-            var center = CubeManager.CenterOffset(_cubeM.sizeX, _cubeM.sizeY, _cubeM.sizeZ, _cubeM.CellSpacing);
-            var localPos = CubeManager.LocalFromIndices(coord.x, coord.y, coord.z, _cubeM.CellSpacing, center);
+            var center = GridUtils.CenterOffset(_cubeM.sizeX, _cubeM.sizeY, _cubeM.sizeZ, _cubeM.CellSpacing);
+            var localPos = GridUtils.LocalFromIndices(coord.x, coord.y, coord.z, _cubeM.CellSpacing, center);
 
             var go = Instantiate(_cubeM.CellPrefab, _cubeM.CubeContainer);
             go.transform.localPosition = localPos;

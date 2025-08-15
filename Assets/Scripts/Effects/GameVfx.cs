@@ -148,7 +148,7 @@ namespace QuantumConnect
                 var rend = cell ? cell.GetComponent<MeshRenderer>() : null;
                 if (rend != null) ApplyHighlight(rend);
 
-                _audio?.PlayPassThrough();
+                _audio?.PlayPassThroughAt(cell.transform.position);
 
                 yield return new WaitForSeconds(blink);
             }

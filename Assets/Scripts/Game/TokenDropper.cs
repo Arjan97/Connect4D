@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -6,30 +6,30 @@ using UnityEngine;
 namespace QuantumConnect
 {
     /// <summary>
-    /// Handles token falling.
+    /// Handles token falling (with per-layer blink), optional black-hole warp, and board write.
     /// </summary>
     public class TokenDropper : ITokenDropper
     {
-        #region Dependencies
-        readonly GameTuning _tuning;
-        readonly CubeManager _cubeM;
-        readonly BlackHoleManager _bhM;
-        readonly IGameVfx _vfx;
-        readonly IAudioService _audio;
-        readonly IBoardRules _rules;
+        #region Deps
+        readonly GameTuning tuning;
+        readonly CubeManager cube;
+        readonly BlackHoleManager holes;
+        readonly IGameVfx vfx;
+        readonly IAudioService audio;
+        readonly IBoardRules rules;
+
+        public TokenDropper(CubeManager c, BlackHoleManager h, IAudioService a, IBoardRules r, GameTuning t, IGameVfx fx)
+        {
+            cube = c;
+            holes = h;
+            audio = a;
+            tuning = t;
+            rules = r;
+            vfx = fx;
+        }
         #endregion
 
-        public TokenDropper(GameServices s)
-        {
-            _cubeM = s.Cube;
-            _bhM = s.BlackHoles;
-            _audio = s.Audio;
-            _rules = s.Rules;
-            _tuning = s.Tuning;
-            _vfx = s.Vfx;
-        }
-
-        #region Public API
+        #region API
         public IEnumerator Drop(
             BoardModel board,
             int currentPlayer,
@@ -41,30 +41,27 @@ namespace QuantumConnect
         {
             int x = startXZ.x;
             int z = startXZ.z;
-
-            if (!_rules.InBounds(board, x, z))
-            {
-                Debug.LogWarning($"TokenDropper.Drop: invalid start indices x:{x} z:{z} (board {board.sizeX}x{board.sizeZ}). Aborting drop.");
+            if (!(x >= 0 && x < board.sizeX && z >= 0 && z < board.sizeZ))
                 yield break;
-            }
 
-            int y = _rules.FindDropY(board, x, z);
+            int y = rules.FindDropY(board, x, z);
             if (y < 0) yield break;
 
             var placed = currentPlayer == 0 ? TokenTypes.PlayerOne : TokenTypes.PlayerTwo;
 
             // Spawn token above the column
-            Vector3 topWorld = _cubeM.GetCellWorldPosition(x, _cubeM.sizeY - 1, z);
+            Vector3 topWorld = cube.GetCellWorldPosition(x, cube.sizeY - 1, z);
             var prefab = factory.PickPrefab(mode, currentPlayer);
-            var token = UnityEngine.Object.Instantiate(
+            var token = factory.SpawnToken(
                 prefab,
-                topWorld + Vector3.up * (_tuning != null ? _tuning.dropHeight : 1.8f),
-                prefab.transform.rotation,
-                _cubeM.CubeContainer
+                cube.CubeContainer,
+                topWorld + Vector3.up * (tuning ? tuning.dropHeight : 1.8f),
+                prefab != null ? prefab.transform.rotation : Quaternion.identity
             );
             factory.PostSpawnVisual(mode, currentPlayer, token, aiTwoMaterial);
 
-            _audio?.PlayTokenLand();
+            if (token != null)
+                audio?.PlayTokenLandAt(token.transform.position);
 
             var passList = BuildPassList(x, z, y);
             int nextPassIndex = 0;
@@ -72,7 +69,7 @@ namespace QuantumConnect
             Vector3Int? holeSrc = FindHighestBlackHoleOnColumn(x, z);
             bool warped = false;
 
-            float dropSpeed = _tuning != null ? _tuning.dropSpeed : 8f;
+            float dropSpeed = tuning ? tuning.dropSpeed : 8f;
 
             // Fall loop
             while (true)
@@ -81,46 +78,42 @@ namespace QuantumConnect
 
                 token.transform.position += Vector3.down * dropSpeed * Time.deltaTime;
 
+                // Blink per layer as token passes it
                 while (nextPassIndex < passList.Count &&
                        token.transform.position.y <= passList[nextPassIndex].worldY)
                 {
                     int passY = passList[nextPassIndex].y;
-
-                    _audio?.PlayPassThrough();
-
-                    if (_vfx != null && _cubeM.Cells[x, passY, z] != null)
-                        yield return _vfx.BlinkCell(x, passY, z, dropSpeed);
-
+                    if (cube.Cells[x, passY, z] != null)
+                        yield return vfx.BlinkCell(x, passY, z, dropSpeed);
                     nextPassIndex++;
                 }
 
-                // Warp if crossing a black hole�s y
-                if (!warped && holeSrc.HasValue && _bhM != null && _bhM.BlackHoles.TryGetValue(holeSrc.Value, out var data))
+                // Warp if crossing a black hole’s y
+                if (!warped && holeSrc.HasValue && holes != null && holes.BlackHoles.TryGetValue(holeSrc.Value, out var data))
                 {
                     float holeY = data.Instance.transform.position.y;
                     if (token.transform.position.y <= holeY)
                     {
                         warped = true;
-                        _audio?.PlayWarp();
-                        _bhM.RemoveBlackHole(holeSrc.Value);
+                        audio?.PlayWarpAt(token.transform.position);
 
-                        int targetX = (holeSrc.Value.x == 0 || holeSrc.Value.x == _cubeM.sizeX - 1)
-                            ? _cubeM.sizeX - 1 - holeSrc.Value.x : x;
-                        int targetZ = (holeSrc.Value.z == 0 || holeSrc.Value.z == _cubeM.sizeZ - 1)
-                            ? _cubeM.sizeZ - 1 - holeSrc.Value.z : z;
+                        // shrink → teleport → expand
+                        yield return vfx.ScaleWarp(token.transform, token.transform.position);
 
-                        int targetY = _rules.FindDropY(board, targetX, targetZ);
-                        if (targetY < 0) yield break;
+                        holes.RemoveBlackHole(holeSrc.Value);
 
-                        Vector3 topOpp = _cubeM.GetCellWorldPosition(targetX, _cubeM.sizeY - 1, targetZ)
-                                         + Vector3.up * (_tuning != null ? _tuning.dropHeight : 1.8f);
+                        x = (holeSrc.Value.x == 0 || holeSrc.Value.x == cube.sizeX - 1)
+                            ? cube.sizeX - 1 - holeSrc.Value.x : x;
+                        z = (holeSrc.Value.z == 0 || holeSrc.Value.z == cube.sizeZ - 1)
+                            ? cube.sizeZ - 1 - holeSrc.Value.z : z;
 
-                        if (_vfx != null) yield return _vfx.ScaleWarp(token.transform, topOpp);
-                        else token.transform.position = topOpp;
+                        y = rules.FindDropY(board, x, z);
+                        if (y < 0) yield break;
 
-                        _audio?.PlayTokenLand();
+                        Vector3 topOpp = cube.GetCellWorldPosition(x, cube.sizeY - 1, z);
+                        token.transform.position = topOpp + Vector3.up * (tuning ? tuning.dropHeight : 1.8f);
+                        audio?.PlayTokenLandAt(token.transform.position);
 
-                        x = targetX; z = targetZ; y = targetY;
                         passList = BuildPassList(x, z, y);
                         nextPassIndex = 0;
 
@@ -128,7 +121,7 @@ namespace QuantumConnect
                     }
                 }
 
-                Vector3 targetPos = _cubeM.GetCellWorldPosition(x, y, z);
+                Vector3 targetPos = cube.GetCellWorldPosition(x, y, z);
                 if (token.transform.position.y <= targetPos.y + 0.01f)
                 {
                     token.transform.position = targetPos;
@@ -138,28 +131,28 @@ namespace QuantumConnect
                 yield return null;
             }
 
-            int appliedY = _rules.ApplyMove(board, x, z, placed);
+            int appliedY = rules.ApplyMove(board, x, z, placed);
             if (appliedY >= 0) y = appliedY;
 
-            var oldCell = _cubeM.Cells[x, y, z];
+            var oldCell = cube.Cells[x, y, z];
             if (oldCell != null)
             {
                 var rend = oldCell.GetComponent<MeshRenderer>();
                 if (rend != null) rend.enabled = false;
             }
-            _cubeM.SetCellVisible(x, y, z, false);
+            cube.SetCellVisible(x, y, z, false);
 
             onPlaced?.Invoke(placed, x, y, z);
         }
         #endregion
 
-        #region Private Helpers
+        #region Helpers
         List<(int y, float worldY)> BuildPassList(int cx, int cz, int yDest)
         {
             var list = new List<(int y, float worldY)>();
-            for (int yy = _cubeM.sizeY - 1; yy > yDest; yy--)
+            for (int yy = cube.sizeY - 1; yy > yDest; yy--)
             {
-                var world = _cubeM.GetCellWorldPosition(cx, yy, cz);
+                var world = cube.GetCellWorldPosition(cx, yy, cz);
                 list.Add((yy, world.y));
             }
             return list;
@@ -167,10 +160,10 @@ namespace QuantumConnect
 
         Vector3Int? FindHighestBlackHoleOnColumn(int x, int z)
         {
-            if (_bhM == null) return null;
+            if (holes == null) return null;
 
             Vector3Int? best = null;
-            foreach (var kv in _bhM.BlackHoles)
+            foreach (var kv in holes.BlackHoles)
             {
                 var s = kv.Key;
                 if (s.x == x && s.z == z && (!best.HasValue || s.y > best.Value.y))

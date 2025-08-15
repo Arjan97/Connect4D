@@ -1,6 +1,22 @@
-public interface IAudioService
+using UnityEngine;
+
+namespace QuantumConnect
 {
-    void PlayPassThrough(); void PlayTokenLand(); void PlayWin(); void PlayWarp(); void PlayBlackHoleSpawn();
-    void PlayMenuMusic(); void PlayGameMusic(); void StopMusic();
-    void SetSfxVolume(float v); void SetMusicVolume(float v);
+    /// <summary>Audio facade used by gameplay/UI.</summary>
+    public interface IAudioService
+    {
+        void PlayPassThroughAt(Vector3 position);
+        void PlayTokenLandAt(Vector3 position);
+        void PlayWarpAt(Vector3 position);
+        void PlayBlackHoleSpawnAt(Vector3 position);
+
+        void PlayWin2D();
+
+        void PlayMenuMusic();
+        void PlayGameMusic();
+        void StopMusic();
+
+        void SetSfxVolume(float v);
+        void SetMusicVolume(float v);
+    }
 }

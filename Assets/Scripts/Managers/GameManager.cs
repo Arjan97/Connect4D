@@ -101,6 +101,9 @@ namespace QuantumConnect
         {
             StopAllCoroutines();
 
+            var tokenPool = CentralManager.Instance?.TokenPool;
+            tokenPool?.ReleaseAllActive();
+
             _scores.Reset(keepScores);
             _uiM.UpdateScore(Mode, _scores.P1, _scores.P2);
             _uiM.HideWinAndRetry();
@@ -142,8 +145,6 @@ namespace QuantumConnect
         public IBoardRules Rules => _rules;
         public BoardModel Board => _board;
         public TurnService Turns => _turns;
-
-        /// <summary>Live game mode (from SessionManager). Defaults to PvAI if session missing.</summary>
         public GameModes Mode => _sessionM != null ? _sessionM.SelectedMode : GameModes.PvAI;
         #endregion
 
@@ -181,15 +182,16 @@ namespace QuantumConnect
             _rules = central.Rules;
             _turns = new TurnService();
             _scores = new ScoreService();
-            _tokenFactory = new TokenFactory(_playerOnePrefab, _playerTwoPrefab, _aiPrefab);
+
+            _tokenFactory = new TokenFactory(_playerOnePrefab, _playerTwoPrefab, _aiPrefab, central?.TokenPool);
+            _dropper = new TokenDropper(_cubeM, _bhM, central?.Audio, _rules, central?.Tuning, central?.GameVfx);
 
             // Inject deps
-            _dropper = new TokenDropper(services);
             _gameVfx?.Initialize(services, _board);
             _bhM?.Initialize(this, _cubeM, central?.Audio, central?.Tuning);
             _aiM?.Initialize(this, _cubeM, central?.Tuning, central?.GameVfx);
             _appM?.Initialize(central?.Audio);
-            _cubeM.Initialize(CentralManager.Instance?.Tuning, respawn: true);
+            _cubeM.Initialize(central?.Tuning, respawn: true);
         }
         #endregion
 
